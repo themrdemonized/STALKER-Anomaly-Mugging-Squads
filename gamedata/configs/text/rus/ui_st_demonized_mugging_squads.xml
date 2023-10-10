@@ -1,0 +1,22 @@
+
+<!--
+    demonized Mugging Squads
+    Generated with AnomalyModCreator
+-->
+
+<?xml version="1.0" encoding="windows-1251"?>
+
+<!-- 
+	MCM
+-->
+<string_table>
+
+	<string id="ui_mcm_demonized_mugging_squads_title">
+		<text>demonized Mugging Squads</text>
+	</string>
+	<string id="ui_mcm_menu_demonized_mugging_squads">
+		<text>demonized Mugging Squads</text>
+	</string>
+
+</string_table>
+                        

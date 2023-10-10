@@ -1,0 +1,13 @@
+
+-- demonized Mugging Squads
+-- Generated with AnomalyModCreator
+
+op = { id= "demonized_mugging_squads",sh=true ,gr={
+		{ id= "title", type= "slide", link= "ui_options_slider_player", text="ui_mcm_demonized_mugging_squads_title", size= {512,50}, spacing= 20 },
+	}
+}
+
+function on_mcm_load()
+	return op
+end
+                        
