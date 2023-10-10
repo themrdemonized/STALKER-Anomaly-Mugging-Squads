@@ -34,10 +34,10 @@ end
 
 active_squads = {}	-- current active bounty squads
 delay = 60*60*24 -- game seconds
-delay_spawn = 300 --300 -- real seconds
+delay_spawn = 60 --300 -- real seconds
 delay_state = 10	-- real seconds
-delta = 60*60			-- not used for now
-spawn_distance = 200	-- don't spawn bounty squads below this distance 
+spawn_distance = 200	-- don't spawn bounty squads below this distance
+safe_smart_distance = 40^2
 
 local last_spawn_time		-- the last time an bounty squad has been spawned
 
@@ -49,7 +49,8 @@ faction_squads = {} -- bounty squad section
 danger_ranks = {}	-- player ranks and the number of possible bounty squad to spawn when a rank is met 
 danger_reputations = {} -- player reputations and the number of possible bounty squad to spawn when a reputation is met 
 
-
+local currentLevelSmarts = {}
+local linkedLevelSmarts = {}
 --====================================< Utilities >====================================--
 function try_spawn()
 	-- gather factions
@@ -100,12 +101,12 @@ function try_spawn()
 	end
 end
 
-function attack(state)
+function attack(state, rush)
 	for k,v in pairs(active_squads) do
 		local se = alife_object(k)
-		if se and (se:section_name() == v) then
+		if se and se:section_name() == v then
 			se.scripted_target = state and "actor" or nil
-			se.rush_to_target = state and true or false
+			se.rush_to_target = rush == true
 			--printf("-bounty_squads.attack - target: %s - rush: %s",se.scripted_target,se.rush_to_target)
 		end
 	end
@@ -126,23 +127,11 @@ function check_close_squads(sq)
 	return false
 end
 
-function get_active_squads()
-	return active_squads
-end
-
-function tbl_size(tbl)
-	local n = 0
-	for k,v in pairs(tbl) do
-		n = n + 1
-	end
-	return n
-end
-
 
 --====================================< Callbacks >====================================--
 function spawn_timer()
 	--printf("-bounty_squads.spawn_timer called")
-	ResetTimeEvent("cycle","bounty_squad_spawn",delay_spawn)
+	ResetTimeEvent("demonized_mugging_squads", "mugging_squad_spawn", delay_spawn)
 	
 	local num = 0
 
@@ -177,7 +166,7 @@ function spawn_timer()
 	end
 	
 	-- try to spawn if there isn't enough bounty squads
-	if (tbl_size(active_squads) < num) then
+	if (size_table(active_squads) < num) then
 		try_spawn()
 	end
 	
@@ -186,155 +175,159 @@ end
 
 function state_timer()
 	--printf("-bounty_squads.state_timer called")
-	ResetTimeEvent("cycle","bounty_squad_state",delay_state)
+	ResetTimeEvent("demonized_mugging_squads", "mugging_squad_state", delay_state)
 	
 	-- clean
-	for k,v in pairs(active_squads) do
-		local se = alife_object(k)
-		if se and (se:section_name() ~= v) then
-			--printf("-bounty_squads.state_timer cleaning [%s] | section: %s - v: %s",k,se:section_name(),v)
-			--safe_release_manager.release(se)
-			active_squads[k] = nil
-		elseif (not se) then
-			--printf("-bounty_squads.state_timer cleaning [%s] | no alife object found",k)
-			active_squads[k] = nil
+	for id, section in pairs(active_squads) do
+		local se = alife_object(id)
+		if (not se) or (se:section_name() ~= section) then
+			print_tip("-demonized_mugging_squads.state_timer cleaning [%s] | section: %s - actual: %s", id, section, se and se:section_name())
+			active_squads[id] = nil
 		end
 	end
-	
-	if (tbl_size(active_squads) == 0) then
+
+	if is_empty(active_squads) then
 		return false
 	end
 	
 	-- don't attack if actor is in a safe level
 	if safe_levels[level.name()] then
-		attack(false)
+		attack(false, false)
 		return false
 	end
 	
 	-- don't attack if actor is in a safe smart
 	local pos = db.actor:position()
 	local se_actor = alife():actor()
-	for name,smart in pairs( SIMBOARD.smarts_by_names ) do
-		local dist = smart.position:distance_to(pos)
-		if (dist < 40) and simulation_objects.is_on_the_same_level(se_actor, smart) then
-			if safe_smarts[name] then
-				attack(false)
+	for name, smart in pairs(currentLevelSmarts) do
+		if safe_smarts[name] then
+			local dist = smart.position:distance_to_sqr(pos)
+			if dist < safe_smart_distance then
+				attack(false, false)
 				return false
 			end
 		end
 	end
 	
-	attack(true)
+	attack(true, true)
 	
 	return false
 end
 
-local function load_state(m_data)
-	local bounty_squad = m_data.bounty_squad
-	if (not bounty_squad) then
+function load_state(m_data)
+	local demonized_mugging_squads = m_data.demonized_mugging_squads
+	if not demonized_mugging_squads then
 		return
 	end
 	
-	if DEV_DEBUG and bounty_squad then
-		for k,v in pairs(bounty_squad) do
-			printdbg("# LOADING: Bounty Squad | [%s]: %s", k, v)
+	if DEV_DEBUG and demonized_mugging_squads then
+		for k,v in pairs(demonized_mugging_squads) do
+			printdbg("# LOADING: Mugging Squad | [%s]: %s", k, v)
 		end
 	end
 	
-	last_spawn_time = bounty_squad.last_spawn_time and utils_data.CTime_from_table(bounty_squad.last_spawn_time) or game.get_game_time()
-	active_squads = bounty_squad.active_squads or {}
+	last_spawn_time = demonized_mugging_squads.last_spawn_time and utils_data.CTime_from_table(demonized_mugging_squads.last_spawn_time) or game.get_game_time()
+	active_squads = demonized_mugging_squads.active_squads or {}
 end
 
-local function save_state(m_data)
-	if (not last_spawn_time) then
+function save_state(m_data)
+	if not last_spawn_time then
 		return
 	end
 	
-	local bounty_squad = {}
-	bounty_squad.last_spawn_time = utils_data.CTime_to_table(last_spawn_time)
-	bounty_squad.active_squads = active_squads or {}
+	local demonized_mugging_squads = {}
+	demonized_mugging_squads.last_spawn_time = utils_data.CTime_to_table(last_spawn_time)
+	demonized_mugging_squads.active_squads = active_squads or {}
 	
 	if DEV_DEBUG then
-		for k,v in pairs(bounty_squad) do
-			printdbg("# SAVING: Bounty Squad | [%s]: %s", k, v)
+		for k,v in pairs(demonized_mugging_squads) do
+			printdbg("# SAVING: Mugging Squad | [%s]: %s", k, v)
 		end
 	end
 	
-	m_data.bounty_squad = bounty_squad
+	m_data.demonized_mugging_squads = demonized_mugging_squads
 end
 
 function server_entity_on_unregister(se_obj, typ)
 	active_squads[se_obj.id] = nil
 end
 
+function actor_on_first_update()
+	for name, smart in pairs(SIMBOARD.smarts_by_names) do
+		if smart and simulation_objects.is_on_the_same_level(alife():actor(), smart) then
+			currentLevelSmarts[name] = smart
+		end
+		if smart and simulation_objects.is_on_the_linked_level(alife():actor(), smart) then
+			linkedLevelSmarts[name] = smart
+		end
+	end
+	CreateTimeEvent("demonized_mugging_squads", "mugging_squad_spawn", delay_spawn, spawn_timer)
+	CreateTimeEvent("demonized_mugging_squads", "mugging_squad_state", delay_state, state_timer)
+end
+
 function on_game_start()
-	local ini_bounty_squad = ini_file("plugins\\demonized_mugging_squads.ltx")
+	local ini_settings = ini_file("plugins\\demonized_mugging_squads.ltx")
 	local n = 0
 	
-	n = ini_bounty_squad:line_count("faction_list")
+	n = ini_settings:line_count("faction_list")
 	for i=0,n-1 do
-		local result, id, value	= ini_bounty_squad:r_line_ex("faction_list",i,"","")
+		local result, id, value	= ini_settings:r_line_ex("faction_list",i,"","")
 		if id then
 			factions[#factions + 1] = id
 		end
 	end
 
-	n = ini_bounty_squad:line_count("faction_only_kidnap_list")
+	n = ini_settings:line_count("faction_only_kidnap_list")
 	for i=0,n-1 do
-		local result, id, value	= ini_bounty_squad:r_line_ex("faction_only_kidnap_list",i,"","")
+		local result, id, value	= ini_settings:r_line_ex("faction_only_kidnap_list",i,"","")
 		if id then
 			factions_only_kidnap[id] = true
 		end
 	end
 	
-	n = ini_bounty_squad:line_count("safe_levels")
+	n = ini_settings:line_count("safe_levels")
 	for i=0,n-1 do
-		local result, id, value	= ini_bounty_squad:r_line_ex("safe_levels",i,"","")
+		local result, id, value	= ini_settings:r_line_ex("safe_levels",i,"","")
 		if id then
 			safe_levels[id] = true
 		end
 	end
 	
-	n = ini_bounty_squad:line_count("safe_smarts")
+	n = ini_settings:line_count("safe_smarts")
 	for i=0,n-1 do
-		local result, id, value	= ini_bounty_squad:r_line_ex("safe_smarts",i,"","")
+		local result, id, value	= ini_settings:r_line_ex("safe_smarts",i,"","")
 		if id then
 			safe_smarts[id] = true
 		end
 	end
 	
-	n = ini_bounty_squad:line_count("faction_squads")
+	n = ini_settings:line_count("faction_squads")
 	for i=0,n-1 do
-		local result, id, value	= ini_bounty_squad:r_line_ex("faction_squads",i,"","")
+		local result, id, value	= ini_settings:r_line_ex("faction_squads",i,"","")
 		if id and value then
 			faction_squads[id] = value
 		end
 	end
 	
-	n = ini_bounty_squad:line_count("danger_ranks")
+	n = ini_settings:line_count("danger_ranks")
 	for i=0,n-1 do
-		local result, id, value	= ini_bounty_squad:r_line_ex("danger_ranks",i,"","")
+		local result, id, value	= ini_settings:r_line_ex("danger_ranks",i,"","")
 		if id and value then
 			danger_ranks[id] = tonumber(value) or 0
 		end
 	end
 	
-	n = ini_bounty_squad:line_count("danger_reputations")
+	n = ini_settings:line_count("danger_reputations")
 	for i=0,n-1 do
-		local result, id, value	= ini_bounty_squad:r_line_ex("danger_reputations",i,"","")
+		local result, id, value	= ini_settings:r_line_ex("danger_reputations",i,"","")
 		if id and value then
 			danger_reputations[id] = tonumber(value) or 0
 		end
 	end
-
-	local function on_game_load()
-		CreateTimeEvent("cycle","bounty_squad_spawn",delay_spawn,spawn_timer)
-		CreateTimeEvent("cycle","bounty_squad_state",delay_state,state_timer)
-	end
 	
 	RegisterScriptCallback("save_state", save_state)
 	RegisterScriptCallback("load_state", load_state)
-	RegisterScriptCallback("on_game_load", on_game_load)
+	RegisterScriptCallback("actor_on_first_update", actor_on_first_update)
 	RegisterScriptCallback("server_entity_on_unregister", server_entity_on_unregister)
 	RegisterScriptCallback("actor_on_first_update", load_settings)
 	RegisterScriptCallback("on_option_change", load_settings)
