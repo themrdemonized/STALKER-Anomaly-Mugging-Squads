@@ -36,7 +36,7 @@ active_squads = {}	-- current active bounty squads
 delay = 60*60*24 -- game seconds
 delay_spawn = 60 --300 -- real seconds
 delay_state = 10	-- real seconds
-spawn_distance = 200	-- don't spawn bounty squads below this distance
+spawn_distance = 200^2	-- don't spawn bounty squads below this distance
 safe_smart_distance = 40^2
 
 local last_spawn_time		-- the last time an bounty squad has been spawned
@@ -51,48 +51,49 @@ danger_reputations = {} -- player reputations and the number of possible bounty 
 
 local currentLevelSmarts = {}
 local linkedLevelSmarts = {}
+
 --====================================< Utilities >====================================--
 function try_spawn()
 	-- gather factions
 	local enemy_factions = {}
-	for i=1,#factions do
-		if game_relations.is_factions_enemies(factions[i],db.actor:character_community()) then
-			enemy_factions[#enemy_factions + 1] = factions[i]
-			--printf("-bounty_squads.try_spawn / [%s] is a possible faction",factions[i])
-		end
+	for i, faction in ipairs(factions) do
+		if settings.allowSameSquads or db.actor:character_community() ~= faction then
+			enemy_factions[#enemy_factions + 1] = faction
+		end 
 	end
 	local picked_squad = enemy_factions[math.random(#enemy_factions)]
 
 	-- gather smarts
-	local spawn_smrt
 	local spawn_smrts = {}
-	for name,smart in pairs( SIMBOARD.smarts_by_names ) do
-		local dist = smart.position:distance_to(db.actor:position())
-		if (dist > spawn_distance) and (simulation_objects.is_on_the_same_level(alife():actor(), smart) or simulation_objects.is_on_the_linked_level(alife():actor(), smart)) then
+	for name, smart in pairs(currentLevelSmarts) do
+		local dist = smart.position:distance_to_sqr(db.actor:position())
+		if dist > spawn_distance then
 			local smrt = SIMBOARD.smarts[smart.id]
-			if ( smrt ) then
+			if smrt then
 				local pass = true
-				for k,v in pairs( smrt.squads ) do
+				for k, v in pairs( smrt.squads ) do
 					local squad = alife_object(k)
-					if (squad and squad.current_target_id and squad.current_target_id == smart.id and not squad:get_script_target()) then
+					if squad and squad.current_target_id and squad.current_target_id == smart.id and not squad:get_script_target() then
 						pass = false
 						break
 					end
 				end
 				if pass then
-					--printf("-bounty_squads.try_spawn / [%s] is a possible smart found, distance: %s",name,dist)
+					-- print_tip("-demonized_mugging_squads.try_spawn / [%s] is a possible smart found, distance: %s", name, dist)
 					spawn_smrts[#spawn_smrts+1] = name
 				end
 			end
 		end
 	end
 	
-	if (#spawn_smrts > 0) then
-		spawn_smrt = spawn_smrts[math.random(#spawn_smrts)]
-		printdbg("- bounty_squads.try_spawn / [%s] has been spawned in [%s]", faction_squads[picked_squad], spawn_smrt)
+	if #spawn_smrts > 0 then
+		local squads = faction_squads[picked_squad]
+		local squad = squads[math.random(#squads)]
+		local spawn_smrt = spawn_smrts[math.random(#spawn_smrts)]
+		print_tip("-demonized_mugging_squads.try_spawn / [%s] has been spawned in [%s]", squad, spawn_smrt)
 	
 		-- Spawn squad and target the player
-		local sq = sim_board.get_sim_board():create_squad(SIMBOARD.smarts_by_names[spawn_smrt], faction_squads[picked_squad])
+		local sq = SIMBOARD:create_squad(SIMBOARD.smarts_by_names[spawn_smrt], squad)
 		sq.scripted_target = "actor"
 		sq.rush_to_target = true
 		
@@ -107,51 +108,56 @@ function attack(state, rush)
 		if se and se:section_name() == v then
 			se.scripted_target = state and "actor" or nil
 			se.rush_to_target = rush == true
-			--printf("-bounty_squads.attack - target: %s - rush: %s",se.scripted_target,se.rush_to_target)
+
+			print_tip("-demonized_mugging_squads. - target: %s - rush: %s, dist %s",
+				se.scripted_target,
+				se.rush_to_target, 
+				(function()
+					local commander = se:commander_id() and level.object_by_id(se:commander_id())
+					return commander and commander:position():distance_to(db.actor:position())
+				end)()
+			)
 		end
 	end
 end
 
-function check_close_squads(sq)
-	for k,v in pairs(active_squads) do
-		local se = alife_object(k)
-		if se and (se:section_name() == v) and (simulation_objects.is_on_the_same_level(alife():actor(), se)) then
-			for j in se:squad_members() do
-				local npc = db.storage[j.id] and db.storage[j.id].object
-				if npc and npc:alive() then
-					return true
-				end
-			end
+function forceTalk(npc)
+	if not npc:is_talking() then
+		local meet = db.storage[npc:id()].meet
+		if meet then
+			local use = meet.meet_manager.use
+			meet.meet_manager.use = "true"
 		end
-	end
-	return false
-end
 
+		npc:enable_talk()
+		npc:set_start_dialog("hello_dialog")
+	    db.actor:run_talk_dialog(npc, false)
+	end
+end
 
 --====================================< Callbacks >====================================--
 function spawn_timer()
 	--printf("-bounty_squads.spawn_timer called")
 	ResetTimeEvent("demonized_mugging_squads", "mugging_squad_spawn", delay_spawn)
 	
-	local num = 0
+	local num = 1
 
-	-- check rank
-	local rank = ranks.get_obj_rank_name(db.actor)
-	if danger_ranks[rank] then 
-		num = num + danger_ranks[rank]
-	end
+	-- -- check rank
+	-- local rank = ranks.get_obj_rank_name(db.actor)
+	-- if danger_ranks[rank] then 
+	-- 	num = num + danger_ranks[rank]
+	-- end
 	
-	-- check reputaion
-	local reputaion = utils_obj.get_reputation_name(db.actor:character_reputation())
-	if danger_reputations[reputaion] then 
-		num = num + danger_reputations[reputaion]
-	end
+	-- -- check reputaion
+	-- local reputaion = utils_obj.get_reputation_name(db.actor:character_reputation())
+	-- if danger_reputations[reputaion] then 
+	-- 	num = num + danger_reputations[reputaion]
+	-- end
 	
-	-- ignore if rank or rep doesn't meet the requirements
-	if (num == 0) then
-		return false
-	end
-	
+	-- -- ignore if rank or rep doesn't meet the requirements
+	-- if (num == 0) then
+	-- 	return false
+	-- end
 	
 	-- read date
 	local current_time = game.get_game_time()
@@ -167,6 +173,7 @@ function spawn_timer()
 	
 	-- try to spawn if there isn't enough bounty squads
 	if (size_table(active_squads) < num) then
+		print_tip("-demonized_mugging_squads.spawn_timer, is valid to spawn")
 		try_spawn()
 	end
 	
@@ -209,6 +216,7 @@ function state_timer()
 		end
 	end
 	
+	print_tip("player is vulnerable to mugging, attack")
 	attack(true, true)
 	
 	return false
@@ -222,7 +230,7 @@ function load_state(m_data)
 	
 	if DEV_DEBUG and demonized_mugging_squads then
 		for k,v in pairs(demonized_mugging_squads) do
-			printdbg("# LOADING: Mugging Squad | [%s]: %s", k, v)
+			print_tip("# LOADING: Mugging Squad | [%s]: %s", k, v)
 		end
 	end
 	
@@ -241,7 +249,7 @@ function save_state(m_data)
 	
 	if DEV_DEBUG then
 		for k,v in pairs(demonized_mugging_squads) do
-			printdbg("# SAVING: Mugging Squad | [%s]: %s", k, v)
+			print_tip("# SAVING: Mugging Squad | [%s]: %s", k, v)
 		end
 	end
 	
@@ -263,6 +271,62 @@ function actor_on_first_update()
 	end
 	CreateTimeEvent("demonized_mugging_squads", "mugging_squad_spawn", delay_spawn, spawn_timer)
 	CreateTimeEvent("demonized_mugging_squads", "mugging_squad_state", delay_state, state_timer)
+end
+
+function squad_on_update(squad)
+	local id = squad.id
+	if not active_squads[id] then return end
+
+	if squad.force_set_goodwill then
+		squad:force_set_goodwill(0, db.actor)
+	end
+	for k in squad:squad_members() do
+		local obj = level.object_by_id(k.id)
+		if obj then
+			obj:force_set_goodwill(0, db.actor)
+		end
+	end
+
+	local commander = squad:commander_id() and level.object_by_id(squad:commander_id())
+	if commander and commander:position():distance_to_sqr(db.actor:position()) < 9 then
+		print_tip("npc %s start to talk, pos %s, actor %s, distance %s", commander:id(), commander:position(), db.actor:position(), commander:position():distance_to_sqr(db.actor:position()))
+		invalidate_squad(squad)
+		forceTalk(commander)
+	end
+end
+
+function on_enemy_eval(obj, enemy, flags)
+
+end
+
+function invalidate_squad(squad)
+	print_tip("squad %s is invalidated", squad.id)
+	attack(false, false)
+	active_squads[squad.id] = nil
+end
+
+function set_squad_as_enemy(squad)
+	print_tip("squad %s is enemy!", squad.id)
+	if squad.force_set_goodwill then
+		squad:force_set_goodwill(-2000, db.actor)
+	end
+	for k in squad:squad_members() do
+		local obj = level.object_by_id(k.id)
+		if obj then
+			obj:force_set_goodwill(-2000, db.actor)
+		end
+	end
+end
+
+function npc_on_before_hit(npc, shit, bone_id, flags)
+	if shit.draftsman:id() ~= AC_ID then return end
+
+	local squad = get_object_squad(npc)
+	if not squad then return end
+	if not active_squads[squad.id] then return end
+
+	invalidate_squad(squad)
+	set_squad_as_enemy(squad)
 end
 
 function on_game_start()
@@ -305,7 +369,10 @@ function on_game_start()
 	for i=0,n-1 do
 		local result, id, value	= ini_settings:r_line_ex("faction_squads",i,"","")
 		if id and value then
-			faction_squads[id] = value
+			local squads = str_explode(value, ",")
+			if is_not_empty(squads) then
+				faction_squads[id] = squads
+			end
 		end
 	end
 	
@@ -329,6 +396,11 @@ function on_game_start()
 	RegisterScriptCallback("load_state", load_state)
 	RegisterScriptCallback("actor_on_first_update", actor_on_first_update)
 	RegisterScriptCallback("server_entity_on_unregister", server_entity_on_unregister)
+
+	RegisterScriptCallback("on_enemy_eval", on_enemy_eval)
+	RegisterScriptCallback("squad_on_update", squad_on_update)
+	RegisterScriptCallback("npc_on_before_hit", npc_on_before_hit)
+
 	RegisterScriptCallback("actor_on_first_update", load_settings)
 	RegisterScriptCallback("on_option_change", load_settings)
 end
