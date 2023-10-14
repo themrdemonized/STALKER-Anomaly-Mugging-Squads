@@ -60,7 +60,42 @@ dangerReputations = {} -- player reputations and the number of possible mugging 
 local currentLevelSmarts = {}
 local linkedLevelSmarts = {}
 
+squadStages = {
+	approach = 1,
+	talk = 2,
+}
+
 --====================================< Utilities >====================================--
+function addToActiveSquads(squad)
+	activeSquads[squad.id] = {
+		name = squad:section_name(),
+		stage = squadStages.approach
+	}
+end
+
+function setSquadStage(squad, num)
+	activeSquads[squad.id].stage = num
+end
+
+function invalidateSquad(squad)
+	print_tip("squad %s is invalidated", squad.id)
+	attack(false, false)
+	activeSquads[squad.id] = nil
+end
+
+function setSquadAsEnemy(squad)
+	print_tip("squad %s is enemy!", squad.id)
+	if squad.force_set_goodwill then
+		squad:force_set_goodwill(-2000, db.actor)
+	end
+	for k in squad:squad_members() do
+		local obj = level.object_by_id(k.id)
+		if obj then
+			obj:force_set_goodwill(-2000, db.actor)
+		end
+	end
+end
+
 function trySpawn()
 	-- gather factions
 	local enemy_factions = {}
@@ -105,11 +140,7 @@ function trySpawn()
 		sq.scripted_target = "actor"
 		sq.rush_to_target = true
 		
-		activeSquads[sq.id] = {
-			name = sq:section_name(),
-			stage = 1
-		}
-		setSquadStage(sq, 1)
+		addToActiveSquads(sq)
 		lastSpawnTime = game.get_game_time()
 	end
 end
@@ -306,7 +337,7 @@ function squad_on_update(squad)
 		end
 	end
 
-	if activeSquads[id].stage == 1 then
+	if activeSquads[id].stage == squadStages.approach then
 		local commander = squad:commander_id() and level.object_by_id(squad:commander_id())
 		if commander and commander:position():distance_to_sqr(db.actor:position()) < 9 then
 			print_tip("npc %s start to talk, pos %s, actor %s, distance %s",
@@ -316,7 +347,7 @@ function squad_on_update(squad)
 				commander:position():distance_to_sqr(db.actor:position())
 			)
 			attack(false, false)
-			setSquadStage(squad, 2)
+			setSquadStage(squad, squadStages.talk)
 			forceTalk(commander)
 		end
 	end
@@ -324,29 +355,6 @@ end
 
 function on_enemy_eval(obj, enemy, flags)
 
-end
-
-function setSquadStage(squad, num)
-	activeSquads[squad.id].stage = num
-end
-
-function invalidateSquad(squad)
-	print_tip("squad %s is invalidated", squad.id)
-	attack(false, false)
-	activeSquads[squad.id] = nil
-end
-
-function setSquadAsEnemy(squad)
-	print_tip("squad %s is enemy!", squad.id)
-	if squad.force_set_goodwill then
-		squad:force_set_goodwill(-2000, db.actor)
-	end
-	for k in squad:squad_members() do
-		local obj = level.object_by_id(k.id)
-		if obj then
-			obj:force_set_goodwill(-2000, db.actor)
-		end
-	end
 end
 
 function npc_on_before_hit(npc, shit, bone_id, flags)
