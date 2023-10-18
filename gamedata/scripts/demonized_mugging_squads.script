@@ -49,14 +49,6 @@ safeSmartDistance = 40^2 -- don't spawn mugging squads if player is near safe sm
 
 local lastSpawnTime	-- the last time a mugging squad has been spawned
 
-factions = {} -- List of factions that can send mugging squads
-factionsOnlyKidnap = {} -- List of factions that can send only kidnap squads
-safeLevels = {} -- mugging squad will stop targeting the player if he's in one of those maps
-safeSmarts = {} -- mugging squad will stop targeting the player if he's in one of those smarts
-factionSquads = {} -- mugging squad section
-dangerRanks = {}	-- player ranks and the number of possible mugging squad to spawn when a rank is met 
-dangerReputations = {} -- player reputations and the number of possible mugging squad to spawn when a reputation is met 
-
 local currentLevelSmarts = {}
 local linkedLevelSmarts = {}
 
@@ -96,12 +88,43 @@ function setSquadAsEnemy(squad)
 	end
 end
 
+function getFactions()
+	return demonized_mugging_squads_options.faction_list
+end
+
+function isFactionsEnemies(f1, f2)
+	return not game_relations.is_factions_friends(f1, f2)
+end
+
+function getSafeLevels()
+	return demonized_mugging_squads_options.safe_levels
+end
+
+function getSafeSmarts()
+	return demonized_mugging_squads_options.safe_smarts
+end
+
+function getFactionSquads()
+	return demonized_mugging_squads_options.faction_squads
+end
+
+function getDangerRanks()
+	return demonized_mugging_squads_options.danger_ranks
+end
+
+function getDangerReputations()
+	return demonized_mugging_squads_options.danger_reputations
+end
+
 function trySpawn()
 	-- gather factions
 	local enemy_factions = {}
+	local factions = getFactions()
 	for i, faction in ipairs(factions) do
-		if settings.allowSameSquads or db.actor:character_community() ~= faction then
-			enemy_factions[#enemy_factions + 1] = faction
+		if settings.allowSameSquads or get_actor_true_community() ~= faction then
+			if settings.allowFriendlySquads or isFactionsEnemies(get_actor_true_community(), faction) then
+				enemy_factions[#enemy_factions + 1] = faction
+			end
 		end 
 	end
 	local picked_squad = enemy_factions[math.random(#enemy_factions)]
@@ -114,7 +137,7 @@ function trySpawn()
 			local smrt = SIMBOARD.smarts[smart.id]
 			if smrt then
 				local pass = true
-				for k, v in pairs( smrt.squads ) do
+				for k, v in pairs(smrt.squads) do
 					local squad = alife_object(k)
 					if squad and squad.current_target_id and squad.current_target_id == smart.id and not squad:get_script_target() then
 						pass = false
@@ -130,7 +153,7 @@ function trySpawn()
 	end
 	
 	if #spawn_smrts > 0 then
-		local squads = factionSquads[picked_squad]
+		local squads = getFactionSquads()[picked_squad]
 		local squad = squads[math.random(#squads)]
 		local spawn_smrt = spawn_smrts[math.random(#spawn_smrts)]
 		print_tip("-demonized_mugging_squads.trySpawn / [%s] has been spawned in [%s]", squad, spawn_smrt)
@@ -187,14 +210,14 @@ function spawnTimer()
 
 	-- -- check rank
 	-- local rank = ranks.get_obj_rank_name(db.actor)
-	-- if dangerRanks[rank] then 
-	-- 	num = num + dangerRanks[rank]
+	-- if getDangerRanks()[rank] then 
+	-- 	num = num + getDangerRanks()[rank]
 	-- end
 	
 	-- -- check reputaion
 	-- local reputaion = utils_obj.get_reputation_name(db.actor:character_reputation())
-	-- if dangerReputations[reputaion] then 
-	-- 	num = num + dangerReputations[reputaion]
+	-- if getDangerReputations()[reputaion] then 
+	-- 	num = num + getDangerReputations()[reputaion]
 	-- end
 	
 	-- -- ignore if rank or rep doesn't meet the requirements
@@ -223,6 +246,57 @@ function spawnTimer()
 	return false
 end
 
+function isSquadCommanderVisible(squad)
+	local obj = squad:commander_id() and level.object_by_id(squad:commander_id())
+	if obj then
+		local screenpos = game.world2ui(obj)
+		if screenpos.x > 0 and screenpos.x < 1024 and screenpos.y > 0 and screenpos.y < 768 then
+			if db.actor:see(obj) then
+				return true
+			end
+		end
+	end
+	return false
+end
+
+function addMoreMembersToSquad(squad, num)
+	-- get squad positions
+	local commander = alife_object(squad:commander_id())
+	local pos = commander.position
+	local lvid = commander.m_level_vertex_id
+	local gvid = commander.m_game_vertex_id
+
+	-- get squad smart
+	local squad_smart = squad.smart_id and SIMBOARD.smarts[squad.smart_id].smrt
+	if not squad_smart then
+		print_tip("-demonized_mugging_squads.addMoreMembersToSquad, cant add members to %s, no smart", squad:name())
+		return
+	end
+
+	-- get npc to spawn section
+	local random_spawn = ini_sys:r_string_ex(squad:section_name(), "npc_random")
+	if not random_spawn then
+		print_tip("-demonized_mugging_squads.addMoreMembersToSquad, cant add members to %s, no random_spawn", squad:name())
+		return
+	end
+	random_spawn = parse_names(random_spawn)
+
+	print_tip("-demonized_mugging_squads.addMoreMembersToSquad, add members to %s : %s", squad:name(), num)
+	for i = 1, num do
+		local random_sec = random_spawn[math.random(1, #random_spawn)]
+
+		-- add and setup new npc
+		local new_member_id = squad:add_squad_member(random_sec, pos, lvid, gvid)
+		local se_obj = new_member_id and alife_object(new_member_id)
+		if (se_obj) then
+			squad_smart:register_npc(se_obj)
+			SIMBOARD:setup_squad_and_group(se_obj)
+		end
+	end
+
+	squad:update()
+end
+
 function stateTimer()
 	ResetTimeEvent("demonized_mugging_squads", "mugging_squad_state", delayState)
 	
@@ -232,6 +306,13 @@ function stateTimer()
 		if (not se) or (se:section_name() ~= v.name) then
 			print_tip("-demonized_mugging_squads.stateTimer cleaning [%s] | section: %s - actual: %s", id, v.name, se and se:section_name())
 			activeSquads[id] = nil
+		else
+			local squad = se
+
+			-- If squad is one man -- fill them up to random 2-5
+			if squad:npc_count() <= 1 and not isSquadCommanderVisible(squad) then
+				addMoreMembersToSquad(squad, math.random(4))
+			end			
 		end
 	end
 
@@ -240,7 +321,7 @@ function stateTimer()
 	end
 	
 	-- don't attack if actor is in a safe level
-	if safeLevels[level.name()] then
+	if getSafeLevels()[level.name()] then
 		attack(false, false)
 		return false
 	end
@@ -248,6 +329,7 @@ function stateTimer()
 	-- don't attack if actor is in a safe smart
 	local pos = db.actor:position()
 	local se_actor = alife():actor()
+	local safeSmarts = getSafeSmarts()
 	for name, smart in pairs(currentLevelSmarts) do
 		if safeSmarts[name] then
 			local dist = smart.position:distance_to_sqr(pos)
@@ -368,69 +450,7 @@ function npc_on_before_hit(npc, shit, bone_id, flags)
 	setSquadAsEnemy(squad)
 end
 
-function on_game_start()
-	local ini_settings = ini_file("plugins\\demonized_mugging_squads.ltx")
-	local n = 0
-	
-	n = ini_settings:line_count("faction_list")
-	for i=0,n-1 do
-		local result, id, value	= ini_settings:r_line_ex("faction_list",i,"","")
-		if id then
-			factions[#factions + 1] = id
-		end
-	end
-
-	n = ini_settings:line_count("faction_only_kidnap_list")
-	for i=0,n-1 do
-		local result, id, value	= ini_settings:r_line_ex("faction_only_kidnap_list",i,"","")
-		if id then
-			factionsOnlyKidnap[id] = true
-		end
-	end
-	
-	n = ini_settings:line_count("safe_levels")
-	for i=0,n-1 do
-		local result, id, value	= ini_settings:r_line_ex("safe_levels",i,"","")
-		if id then
-			safeLevels[id] = true
-		end
-	end
-	
-	n = ini_settings:line_count("safe_smarts")
-	for i=0,n-1 do
-		local result, id, value	= ini_settings:r_line_ex("safe_smarts",i,"","")
-		if id then
-			safeSmarts[id] = true
-		end
-	end
-	
-	n = ini_settings:line_count("faction_squads")
-	for i=0,n-1 do
-		local result, id, value	= ini_settings:r_line_ex("faction_squads",i,"","")
-		if id and value then
-			local squads = str_explode(value, ",")
-			if is_not_empty(squads) then
-				factionSquads[id] = squads
-			end
-		end
-	end
-	
-	n = ini_settings:line_count("danger_ranks")
-	for i=0,n-1 do
-		local result, id, value	= ini_settings:r_line_ex("danger_ranks",i,"","")
-		if id and value then
-			dangerRanks[id] = tonumber(value) or 0
-		end
-	end
-	
-	n = ini_settings:line_count("danger_reputations")
-	for i=0,n-1 do
-		local result, id, value	= ini_settings:r_line_ex("danger_reputations",i,"","")
-		if id and value then
-			dangerReputations[id] = tonumber(value) or 0
-		end
-	end
-	
+function on_game_start()	
 	RegisterScriptCallback("save_state", save_state)
 	RegisterScriptCallback("load_state", load_state)
 	RegisterScriptCallback("actor_on_first_update", actor_on_first_update)
