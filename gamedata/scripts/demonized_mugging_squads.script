@@ -84,6 +84,7 @@ function setSquadAsEnemy(squad)
 		local obj = level.object_by_id(k.id)
 		if obj then
 			obj:force_set_goodwill(-2000, db.actor)
+			obj:set_relation(game_object.enemy, db.actor)
 		end
 	end
 end
@@ -172,8 +173,8 @@ function attack(state, rush)
 	for k, v in pairs(activeSquads) do
 		local se = alife_object(k)
 		if se and se:section_name() == v.name then
-			se.scripted_target = state and v.stage == 1 and "actor"
-			se.rush_to_target = rush == true and v.stage == 1
+			se.scripted_target = state and v.stage == squadStages.approach and "actor"
+			se.rush_to_target = rush == true and v.stage == squadStages.approach
 
 			print_tip("-demonized_mugging_squads. - target: %s - rush: %s, dist %s",
 				se.scripted_target,
@@ -297,6 +298,8 @@ function addMoreMembersToSquad(squad, num)
 	squad:update()
 end
 
+-- default_meet[is_enemy].use                    = "{=is_wounded} false, {!is_squad_commander} false, {=actor_enemy} false, {=has_enemy} false, {=dist_to_actor_le(3)} true, false"
+
 function stateTimer()
 	ResetTimeEvent("demonized_mugging_squads", "mugging_squad_state", delayState)
 	
@@ -310,7 +313,7 @@ function stateTimer()
 			local squad = se
 
 			-- If squad is one man -- fill them up to random 2-5
-			if squad:npc_count() <= 1 and not isSquadCommanderVisible(squad) then
+			if squad:npc_count() <= 1 and not isSquadCommanderVisible(squad) and v.stage == squadStages.approach then
 				addMoreMembersToSquad(squad, math.random(4))
 			end			
 		end
@@ -416,6 +419,7 @@ function squad_on_update(squad)
 		local obj = level.object_by_id(k.id)
 		if obj then
 			obj:force_set_goodwill(0, db.actor)
+			obj:set_relation(game_object.neutral, db.actor)
 		end
 	end
 
