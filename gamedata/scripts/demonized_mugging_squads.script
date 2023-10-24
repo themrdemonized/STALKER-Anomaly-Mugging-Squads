@@ -8,6 +8,59 @@
 -- ; Monolith and sin will try kidnapping you always, no mugging. If you agree, it should bring you back to a base where all of your gear is removed until you convert and you have two options before you do, agree or fight, but lmao with no gear.
 -- ; It is entirely random and happens anywhere on the map except interiors like labs or main
 
+local id = 70000
+local idOffset = 0
+local gizmos = {
+	sphereSquad = nil,
+}
+local debugMode = true
+local gizmosInitialized = false
+function initializeGizmos()
+	if gizmosInitialized then return end
+	gizmosInitialized = true
+
+	gizmos.sphereSquad = debug_render.add_object(id + idOffset, DBG_ScriptObject.sphere):cast_dbg_sphere()
+end
+function reset(gizmosArr, force)
+	if debugMode or force then
+		if gizmosArr then
+			for i = 1, #gizmosArr do
+				local gizmo = gizmosArr[i]
+				if gizmos[gizmo] then
+					local v = gizmos[gizmo]
+					if type(v) == "table" then
+						for i = 1, #v do
+							local p = v[i]
+							p.visible = false
+						end
+					else
+						v.visible = false
+					end
+				end
+			end
+		else
+			for k, v in pairs(gizmos) do
+				if type(v) == "table" then
+					for i = 1, #v do
+						local p = v[i]
+						p.visible = false
+					end
+				else
+					v.visible = false
+				end
+			end		
+		end
+	end
+end
+function toggleDebugMode()
+	debugMode = not debugMode
+	if debugMode then
+		initializeGizmos()
+	else
+		reset(nil, true)
+	end
+end
+
 -- MCM
 function load_defaults()
 	local t = {}
@@ -82,9 +135,13 @@ function setSquadAsEnemy(squad)
 	end
 	for k in squad:squad_members() do
 		local obj = level.object_by_id(k.id)
+		local se_obj = alife_object(k.id)
 		if obj then
-			obj:force_set_goodwill(-2000, db.actor)
 			obj:set_relation(game_object.enemy, db.actor)
+			obj:force_set_goodwill(-2000, db.actor)
+		end
+		if se_obj then
+			se_obj:force_set_goodwill(-2000, db.actor)
 		end
 	end
 end
@@ -106,7 +163,11 @@ function getSafeSmarts()
 end
 
 function getFactionSquads()
-	return demonized_mugging_squads_options.faction_squads
+	local squads = {}
+	for k, v in pairs(demonized_mugging_squads_options.faction_squads) do
+		squads[k] = str_explode(v, ",")
+	end
+	return squads
 end
 
 function getDangerRanks()
@@ -188,6 +249,20 @@ function attack(state, rush)
 	end
 end
 
+function updateTalk()
+	if not load_var(db.actor, "force_all_talk", false) then
+		print_tip("actor not talking, updateTalk stop")
+		UnregisterScriptCallback("actor_on_update", updateTalk)
+		return
+	end
+	if not db.actor:is_talking() then
+		print_tip("actor stop talking, force_all_talk false and updateTalk stop")
+		save_var(db.actor, "force_all_talk", false)
+		UnregisterScriptCallback("actor_on_update", updateTalk)
+		return
+	end
+end
+
 function forceTalk(npc)
 	if not npc:is_talking() then
 		local meet = db.storage[npc:id()].meet
@@ -198,6 +273,8 @@ function forceTalk(npc)
 
 		npc:enable_talk()
 		npc:set_start_dialog("hello_dialog")
+		RegisterScriptCallback("actor_on_update", updateTalk)
+		save_var(db.actor, "force_all_talk", true)
 	    db.actor:run_talk_dialog(npc, false)
 	end
 end
@@ -298,7 +375,44 @@ function addMoreMembersToSquad(squad, num)
 	squad:update()
 end
 
--- default_meet[is_enemy].use                    = "{=is_wounded} false, {!is_squad_commander} false, {=actor_enemy} false, {=has_enemy} false, {=dist_to_actor_le(3)} true, false"
+-- Simplified parsing of condition list
+defaultUseCond = "{=is_wounded} false, {!is_squad_commander} false, {=actor_enemy} false, {=has_enemy} false, {=dist_to_actor_le(3)} true, false"
+local function parseConditionTable(npc, conditions)
+	for i, v in ipairs(conditions) do
+		local functions = v[2]
+		local val = v[1]
+		if functions then
+			for _, func in ipairs(functions) do
+				local f = func[1]
+				local args = func[3] or {}
+				local requiredResult = func[2] == 3
+				if xr_conditions[f] then
+					local result = not not xr_conditions[f](db.actor, npc, args)
+					local r = result == requiredResult
+					-- print_tip("parsing condition %s(%s) for %s: result %s", f, table.concat(args, ", "), npc:name(), result)
+					if r then
+						-- print_tip("parsing condition %s(%s) for %s: result fullfiled %s", f, table.concat(args, ", "), npc:name(), val)
+						return val
+					end
+				end
+			end
+		else
+			-- print_tip("parsing condition nil for %s: result fullfiled %s", npc:name(), val)
+			return val
+		end
+	end
+	return false
+end
+function parseCondition(npc, condString)
+	local conditions = xr_logic.parse_condlist(npc, nil, nil, condString)
+	local result = parseConditionTable(npc, conditions)
+	if result == "true" then
+		result = true
+	elseif result == "false" then
+		result = false
+	end
+	return result
+end
 
 function stateTimer()
 	ResetTimeEvent("demonized_mugging_squads", "mugging_squad_state", delayState)
@@ -396,6 +510,9 @@ function server_entity_on_unregister(se_obj, typ)
 end
 
 function actor_on_first_update()
+	if debugMode then
+		initializeGizmos()
+	end
 	for name, smart in pairs(SIMBOARD.smarts_by_names) do
 		if smart and simulation_objects.is_on_the_same_level(alife():actor(), smart) then
 			currentLevelSmarts[name] = smart
@@ -411,30 +528,53 @@ end
 function squad_on_update(squad)
 	local id = squad.id
 	if not activeSquads[id] then return end
+	
+	local commander = squad:commander_id() and level.object_by_id(squad:commander_id())
+	local requiredGoodwill = 0
+
+	if commander then
+		if debugMode then
+			gizmos.sphereSquad.visible = true
+			gizmos.sphereSquad.color = fcolor():set(1,0,0,1)
+		    local scale_mat = matrix():identity():scale(0.1,0.1,0.1)
+		    local pos_mat = matrix():translate(commander:position())
+		    local mat = matrix():mul(pos_mat, scale_mat)
+		    gizmos.sphereSquad.matrix = mat
+		end
+		requiredGoodwill = math.max(0, -relation_registry.community_relation(character_community(commander), character_community(db.actor)))
+		-- print_tip("setting goodwill to %s", requiredGoodwill)
+	end
 
 	if squad.force_set_goodwill then
-		squad:force_set_goodwill(0, db.actor)
+		squad:force_set_goodwill(requiredGoodwill, db.actor)
 	end
 	for k in squad:squad_members() do
 		local obj = level.object_by_id(k.id)
+		local se_obj = alife_object(k.id)
 		if obj then
-			obj:force_set_goodwill(0, db.actor)
 			obj:set_relation(game_object.neutral, db.actor)
+			obj:force_set_goodwill(requiredGoodwill, db.actor)
+		end
+		if se_obj then
+			se_obj:force_set_goodwill(requiredGoodwill, db.actor)
 		end
 	end
 
 	if activeSquads[id].stage == squadStages.approach then
 		local commander = squad:commander_id() and level.object_by_id(squad:commander_id())
-		if commander and commander:position():distance_to_sqr(db.actor:position()) < 9 then
-			print_tip("npc %s start to talk, pos %s, actor %s, distance %s",
-				commander:id(),
-				roundVec(commander:position()),
-				roundVec(db.actor:position()),
-				commander:position():distance_to_sqr(db.actor:position())
-			)
-			attack(false, false)
-			setSquadStage(squad, squadStages.talk)
-			forceTalk(commander)
+		if commander then
+			local condition = parseCondition(commander, defaultUseCond)
+			if condition then
+				print_tip("npc %s start to talk, pos %s, actor %s, distance %s",
+					commander:id(),
+					roundVec(commander:position()),
+					roundVec(db.actor:position()),
+					commander:position():distance_to_sqr(db.actor:position())
+				)
+				attack(false, false)
+				setSquadStage(squad, squadStages.talk)
+				forceTalk(commander)
+			end
 		end
 	end
 end
