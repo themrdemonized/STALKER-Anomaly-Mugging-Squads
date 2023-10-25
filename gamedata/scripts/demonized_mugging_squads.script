@@ -108,6 +108,7 @@ local linkedLevelSmarts = {}
 squadStages = {
 	approach = 1,
 	talk = 2,
+	done = 3,
 }
 
 --====================================< Utilities >====================================--
@@ -124,24 +125,24 @@ end
 
 function invalidateSquad(squad)
 	print_tip("squad %s is invalidated", squad.id)
-	attack(false, false)
+	-- attack(false, false)
 	activeSquads[squad.id] = nil
 end
 
 function setSquadAsEnemy(squad)
 	print_tip("squad %s is enemy!", squad.id)
 	if squad.force_set_goodwill then
-		squad:force_set_goodwill(-2000, db.actor)
+		squad:force_set_goodwill(-5000, db.actor)
 	end
 	for k in squad:squad_members() do
 		local obj = level.object_by_id(k.id)
 		local se_obj = alife_object(k.id)
 		if obj then
 			obj:set_relation(game_object.enemy, db.actor)
-			obj:force_set_goodwill(-2000, db.actor)
+			obj:force_set_goodwill(-5000, db.actor)
 		end
 		if se_obj then
-			se_obj:force_set_goodwill(-2000, db.actor)
+			se_obj:force_set_goodwill(-5000, db.actor)
 		end
 	end
 end
@@ -272,10 +273,10 @@ function forceTalk(npc)
 		end
 
 		npc:enable_talk()
-		npc:set_start_dialog("hello_dialog")
+		npc:set_start_dialog("muggingDialogGiveMeYourShit")
 		RegisterScriptCallback("actor_on_update", updateTalk)
 		save_var(db.actor, "force_all_talk", true)
-	    db.actor:run_talk_dialog(npc, false)
+	    db.actor:run_talk_dialog(npc, true)
 	end
 end
 
@@ -418,6 +419,7 @@ function stateTimer()
 	ResetTimeEvent("demonized_mugging_squads", "mugging_squad_state", delayState)
 	
 	-- clean
+	local currentActorStage
 	for id, v in pairs(activeSquads) do
 		local se = alife_object(id)
 		if (not se) or (se:section_name() ~= v.name) then
@@ -429,11 +431,29 @@ function stateTimer()
 			-- If squad is one man -- fill them up to random 2-5
 			if squad:npc_count() <= 1 and not isSquadCommanderVisible(squad) and v.stage == squadStages.approach then
 				addMoreMembersToSquad(squad, math.random(4))
-			end			
+			end
+
+			if v.stage == squadStages.talk then
+				currentActorStage = squadStages.talk
+			elseif v.stage == squadStages.done then
+				if not (
+					simulation_objects.is_on_the_same_level(alife():actor(), squad)
+					and isSquadCommanderVisible(squad)
+				) then
+					SIMBOARD:remove_squad(squad)
+					invalidateSquad(squad)
+				end
+			end
 		end
 	end
 
 	if is_empty(activeSquads) then
+		return false
+	end
+
+	-- Don't attack if actor is talking to mugging squad
+	if currentActorStage == squadStages.talk then
+		attack(false, false)
 		return false
 	end
 	
@@ -607,4 +627,74 @@ function on_game_start()
 	RegisterScriptCallback("actor_on_first_update", load_settings)
 	RegisterScriptCallback("on_option_change", load_settings)
 end
-                        
+
+-- Dialogs
+local gt = game.translate_string
+local GetTalkingNpc = mob_trade.GetTalkingNpc or function()
+	--log("~GetTalkingNpc:->:tData.oNpc:clsid() == clsid.script_trader")
+	for k,v in pairs(db.storage) do
+		local oNpc = v.object
+		if oNpc ~= nil then
+			if oNpc:is_talking() and oNpc:id() ~= AC_ID then
+				return oNpc
+			end
+		end
+	end
+end
+
+local function getNpcAndActor(a, b)
+	local npc = a:id() == AC_ID and b or a
+	local actor = a:id() == AC_ID and a or b
+	return npc, actor
+end
+
+function dialogs.demonized_mugging_squads_prepare_dialog_info(a, b)
+	-- local npc = GetTalkingNpc()
+end
+
+function dialogs.demonized_mugging_squads_text_give_me_stuff()
+	local s = gt("mugging_give_me_stuff")
+	return s or ""
+end
+
+function dialogs.demonized_mugging_squads_text_here_is_my_stuff()
+	local s = gt("mugging_here_is_my_stuff")
+	return s or ""
+end
+
+function dialogs.demonized_mugging_squads_give_my_stuff(a, b)
+	local npc, actor = getNpcAndActor(a, b)
+	dialogs.relocate_money(npc, db.actor:money(), "out")
+end     
+
+function dialogs.demonized_mugging_squads_text_thank_you_and_gtfo()
+	local s = gt("mugging_thank_you_and_gtfo")
+	return s or ""
+end
+
+function dialogs.demonized_mugging_squads_text_ok()
+	local s = gt("mugging_ok")
+	return s or ""
+end
+
+function dialogs.demonized_mugging_squads_break_dialog(a, b)
+	dialogs.break_dialog(a, b)
+	local npc, actor = getNpcAndActor(a, b)
+	local squad = get_object_squad(npc)
+	if squad then
+		setSquadStage(squad, squadStages.done)
+	end
+end
+
+function dialogs.demonized_mugging_squads_text_fuck_you_and_start_fight()
+	local s = gt("mugging_fuck_you_and_start_fight")
+	return s or ""
+end
+
+function dialogs.demonized_mugging_squads_fuck_you_and_start_fight(a, b)
+	dialogs.break_dialog(a, b)
+	local npc, actor = getNpcAndActor(a, b)
+	local squad = get_object_squad(npc)
+	invalidateSquad(squad)
+	setSquadAsEnemy(squad)
+end
