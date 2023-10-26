@@ -8,6 +8,9 @@
 -- ; Monolith and sin will try kidnapping you always, no mugging. If you agree, it should bring you back to a base where all of your gear is removed until you convert and you have two options before you do, agree or fight, but lmao with no gear.
 -- ; It is entirely random and happens anywhere on the map except interiors like labs or main
 
+-- For the give me stuff part, it is possible to have the most common outcome being money/one item and then a rare chance of them taking all your shit
+-- Oh, and playing a sound upon mugging, can you make it like only a 50% chance that it happens
+
 local id = 70000
 local idOffset = 0
 local gizmos = {
@@ -235,7 +238,7 @@ function attack(state, rush)
 	for k, v in pairs(activeSquads) do
 		local se = alife_object(k)
 		if se and se:section_name() == v.name then
-			se.scripted_target = state and v.stage == squadStages.approach and "actor"
+			se.scripted_target = state and v.stage == squadStages.approach and "actor" or nil
 			se.rush_to_target = rush == true and v.stage == squadStages.approach
 
 			print_tip("-demonized_mugging_squads. - target: %s - rush: %s, dist %s",
@@ -430,7 +433,9 @@ function stateTimer()
 
 			-- If squad is one man -- fill them up to random 2-5
 			if squad:npc_count() <= 1 and not isSquadCommanderVisible(squad) and v.stage == squadStages.approach then
-				addMoreMembersToSquad(squad, math.random(4))
+				local min = 3 - squad:npc_count()
+				local max = 4
+				addMoreMembersToSquad(squad, math.random(min, max))
 			end
 
 			if v.stage == squadStages.talk then
