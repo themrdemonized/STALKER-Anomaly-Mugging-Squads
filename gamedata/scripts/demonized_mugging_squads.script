@@ -1,4 +1,3 @@
-
 -- demonized Mugging Squads
 -- Generated with AnomalyModCreator
 
@@ -495,7 +494,7 @@ function load_state(m_data)
 	end
 	
 	if DEV_DEBUG and demonized_mugging_squads then
-		for k,v in pairs(demonized_mugging_squads) do
+		for k, v in pairs(demonized_mugging_squads) do
 			print_tip("# LOADING: Mugging Squad | [%s]: %s", k, v)
 		end
 	end
@@ -522,7 +521,7 @@ function save_state(m_data)
 	demonized_mugging_squads.active_squads = activeSquads or {}
 	
 	if DEV_DEBUG then
-		for k,v in pairs(demonized_mugging_squads) do
+		for k, v in pairs(demonized_mugging_squads) do
 			print_tip("# SAVING: Mugging Squad | [%s]: %s", k, v)
 		end
 	end
@@ -560,8 +559,8 @@ function squad_on_update(squad)
 	if commander then
 		if debugMode then
 			gizmos.sphereSquad.visible = true
-			gizmos.sphereSquad.color = fcolor():set(1,0,0,1)
-		    local scale_mat = matrix():identity():scale(0.1,0.1,0.1)
+			gizmos.sphereSquad.color = fcolor():set(1, 0, 0, 1)
+		    local scale_mat = matrix():identity():scale(0.1, 0.1, 0.1)
 		    local pos_mat = matrix():translate(commander:position())
 		    local mat = matrix():mul(pos_mat, scale_mat)
 		    gizmos.sphereSquad.matrix = mat
@@ -634,6 +633,8 @@ function on_game_start()
 end
 
 -- Scheme
+actid = 188125
+evaid = 188125
 class "evaluator_muggingSquadBehaviour" (property_evaluator)
 function evaluator_muggingSquadBehaviour:__init(npc, name, storage) super (nil, name)
 	self.st = storage
@@ -650,6 +651,14 @@ function evaluator_muggingSquadBehaviour:evaluate()
 		return false 
 	end
 
+	if not db.actor then
+		return false
+	end
+
+	if not db.actor:alive() then
+		return false
+	end
+
 	local squad = get_object_squad(npc)
 	if not squad then return false end
 	if not activeSquads[squad.id] then return false end
@@ -663,7 +672,7 @@ function evaluator_muggingSquadBehaviour:evaluate()
 end
 
 class "action_muggingSquadBehaviour" (action_base)
-function action_muggingSquadBehaviour:__init (npc,name,storage)
+function action_muggingSquadBehaviour:__init (npc, name, storage)
 	super(nil, name)
 	self.st = storage
 end
@@ -679,14 +688,21 @@ function action_muggingSquadBehaviour:initialize()
 
 	self.isCommander = self.squad:commander_id() and level.object_by_id(self.squad:commander_id()) and level.object_by_id(self.squad:commander_id()) == npc:id()
 
-	local i = 1
+	local activeMembers = {}
 	for k in squad:squad_members() do
 		local obj = level.object_by_id(k.id)
-		if obj and obj:id() == npc:id() then
-			self.squadMemberNum = i
-			break
+		if obj then
+			table.insert(activeMembers, obj)
 		end
-		i = i + 1
+	end
+
+	self.squadMembersCount = 0
+	self.squadMemberNum = 1
+	for i, obj in ipairs(activeMembers) do
+		self.squadMembersCount = self.squadMembersCount + 1
+		if obj:id() == npc:id() then
+			self.squadMemberNum = self.squadMembersCount
+		end
 	end
 
 	npc:set_desired_position()
@@ -723,74 +739,37 @@ function action_muggingSquadBehaviour:lmove(vid)
 	return vid
 end
 
-function action_muggingSquadBehaviour:try_go_away()
+function action_muggingSquadBehaviour:findPos()
 	local npc = self.object
 	local id = npc:id()
 	local base_point = npc:level_vertex_id()
-	local tries = 5
+	local tries = 10
 	
-	for i = 1, self.initial_dir and tries * 2 or tries do
-		-- If cant find lvid in initial direction after <tries> tries - invalidate it
-		if i > tries then self.initial_dir = nil end
+	for i = 1, tries do
+		-- Set new lvid and direction
+		-- Commander stays at the front and talks
+		-- Member #2 goes to the left of player
+		-- Member #3 goes to the right
+		-- Additional members surround player from the front
+		local dir = db.actor:direction()
 
-		-- Check lvid in npc direction
-		-- If has information about danger - run away from it
-		-- If already run towards initial direction - continue in same direction until invalidation
-		local dir = npc:direction()
-		local danger_dir = db.storage[id].danger_dir
-		danger_dir = danger_dir and vector():set(danger_dir.x, dir.y, danger_dir.z):normalize()
-		local danger_pos = db.storage[id].danger_pos
-
-		-- Case 1: danger_dir and danger_pos are known, run away from danger in about 90 degrees from it
-		if danger_dir and danger_pos then
-			local npc_to_danger = vector():set(npc:position()):sub(danger_pos):normalize()
-			if angle_left_xz(danger_dir, npc_to_danger) then
-				away_dir = vector_rotate_y(danger_dir, 90)
-			else
-				away_dir = vector_rotate_y(danger_dir, -90)
-			end
-
-			print_tip("npc %s has danger_dir and pos", npc:name())
-			-- demonized_geometry_ray.VisualizeRay(npc:position():add(vector():set(0, 1, 0)), vector():mad(npc:position():add(vector():set(0, 1, 0)), away_dir, 3), nil, 300)
-
-		-- Case 2: danger_pos is known, maximize distance away from it
-		elseif danger_pos then
-			local npc_to_danger = vector():set(npc:position()):sub(danger_pos):normalize()
-			away_dir = vector_rotate_y(npc_to_danger, random_choice(-20, 20))
-
-			print_tip("npc %s has danger_pos", npc:name())
-			-- demonized_geometry_ray.VisualizeRay(npc:position():add(vector():set(0, 1, 0)), vector():mad(npc:position():add(vector():set(0, 1, 0)), away_dir, 3), nil, 300)
-
-		-- Case 3: danger_dir is known, choose random 90 degree direction
-		elseif danger_dir then
-			away_dir = vector_rotate_y(danger_dir, random_choice(90, -90))
-
-			print_tip("npc %s has danger_dir", npc:name())
-			-- demonized_geometry_ray.VisualizeRay(npc:position():add(vector():set(0, 1, 0)), vector():mad(npc:position():add(vector():set(0, 1, 0)), away_dir, 3), nil, 300)
-
-		-- Case 4: no information, just run somewhere
+		if self.squadMemberNum == 2 then
+			dir = vector_rotate_y(dir, math.random(-90, -60))
+		elseif self.squadMemberNum == 3 then
+			dir = vector_rotate_y(dir, math.random(60, 90))
 		else
-			away_dir = vector_rotate_y(dir, random_choice(120, -120))
+			dir = vector_rotate_y(dir, random_choice(math.random(-55, -15), math.random(15, 55)))
 		end
 
-		-- Randomize direction a bit
-		away_dir = vector_rotate_y(away_dir, random_float(-30, 30))
+		dir:normalize()
+		local pos = db.actor:position():mad(dir, 2)
+		local dist = pos:distance_to(base_point)
+		dir = vector():set(pos):sub(base_point):normalize()
 
-		-- Set new lvid and direction
-		local dir = self.initial_dir and vector_rotate_y(self.initial_dir, random_float(-30, 30)) or away_dir
-		for radius = 10, 1, -1 do
+		for radius = dist, 1, -1 do
 			local lvid = level.vertex_in_direction(base_point, dir, radius)
 			if self:validate(lvid) then
-
-				-- If found lvid - invalidate dangers, next update pick in initial direction or randomly
-				if not self.initial_dir then
-					db.storage[id].danger_dir = nil
-					db.storage[id].danger_pos = nil
-				end
 				self.initial_dir = level.vertex_position(lvid):sub(npc:position()):normalize()
-		
-				-- demonized_geometry_ray.VisualizeRay(npc:position():add(vector():set(0, 1, 0)), vector():mad(npc:position():add(vector():set(0, 1, 0)), self.initial_dir, 3), nil, 300)
-
 				return self:lmove(lvid)
 			end
 		end
@@ -798,54 +777,51 @@ function action_muggingSquadBehaviour:try_go_away()
 end
 
 function action_muggingSquadBehaviour:execute()
-	--utils_data.debug_write(strformat("action_muggingSquadBehaviour:execute start"))
 	action_base.execute(self)
 
-	-- Check reaction time first
-	if time_global() - self.panic_time < self.panic_threshold then
-		print_tip("npc hasn't reacted yet, pt %s, pthr %s", time_global() - self.panic_time, self.panic_threshold)
-		return
-	end
-
 	local npc = self.object	
-	--printf("enemy = %s",enemy and enemy:name())
 	
 	-- ensure and enforce path type
-	if (npc:path_type() ~= game_object.level_path) then 
+	if npc:path_type() ~= game_object.level_path then 
 		npc:set_path_type(game_object.level_path)
 	end
 
-	-- Set panic state
-	local bw = npc:active_item()
-	local new_state = bw and "sprint" or "panic"
-	local lvid
+	local squad = activeSquads[self.squad.id]
+	if squad.stage == squadStages.talk then
+		-- Set panic state
+		local bw = npc:active_item()
+		local new_state = "sprint"
+		local lvid = self.isCommander and npc:level_vertex_id()
 
-	-- Find new lvid to reach
-	if self.st.vid then
-		if (npc:level_vertex_id() == self.st.vid) then
-			print_tip("npc reached lvid %s, switch", self.st.vid)
-			lvid = self:try_go_away()
-			print_tip("npc switched to new lvid %s", lvid)
+		-- Find new lvid to reach
+		if not self.isCommander then
+			if self.st.vid then
+				if npc:level_vertex_id() == self.st.vid then
+					new_state = "threat_na"
+				else
+					npc:set_dest_level_vertex_id(self.st.vid)
+				end 	
+				lvid = self.st.vid
+			else
+				lvid = self:findPos()
+			end
 		else
-			npc:set_dest_level_vertex_id(self.st.vid)
-			lvid = self.st.vid
-			-- print_tip("npc trying to reach lvid %s", lvid)
-		end 	
-	else
-		lvid = self:try_go_away()
-		print_tip("npc init new lvid %s", lvid)
-	end
+			new_state = "threat_na"
+		end
 
-	-- Set sight in direction of new lvid and confirm the state
-	npc:set_sight(look.direction, lvid and level.vertex_position(lvid):sub(npc:position()):normalize() or npc:direction())
-	state_mgr.set_state(npc, new_state, nil, nil, {
-		look_position = lvid and level.vertex_position(lvid) or npc:position(),
-		look_object = lvid,
-		look_dir = lvid and level.vertex_position(lvid):sub(npc:position()):normalize() or npc:direction(),
-	}, {
-		fast_set = true,
-		animation = false,
-	})
+		-- Set sight in direction of new lvid and confirm the state
+		-- npc:set_sight(look.direction, lvid and level.vertex_position(lvid):sub(npc:position()):normalize() or npc:direction())
+		state_mgr.set_state(npc, new_state, nil, nil, {
+			look_position = utils_obj.safe_bone_pos(db.actor, "bip01_head"),
+			look_object = db.actor,
+			look_dir = utils_obj.safe_bone_pos(npc, "bip01_head"):sub(utils_obj.safe_bone_pos(db.actor, "bip01_head")):normalize(),
+		}, {
+			fast_set = true,
+			animation = false,
+		})
+	elseif squad.stage == squadStages.done then
+		-- Find a smart for mugging squad to move
+	end
 
 	-- First update force movement 
 	if self.first_update then
@@ -866,8 +842,6 @@ function action_muggingSquadBehaviour:finalize()
 		db.used_level_vertex_ids[self.st.vid] = nil
 	end
 	self.st.vid = nil
-	db.storage[self.object:id()].panicked = nil
-	self.panic_time = time_global()
 
 	local npc = self.object
 	npc:clear_animations()
@@ -878,55 +852,55 @@ function action_muggingSquadBehaviour:finalize()
 	-- npc:set_path_type(self.path)
 end
 
-function setup_generic_scheme(npc,ini,scheme,section,stype,temp)
-	local st = xr_logic.assign_storage_and_bind(npc,ini,"muggingSquadBehaviour",section,temp)
+function setup_generic_scheme(npc, ini, scheme, section, stype, temp)
+	local st = xr_logic.assign_storage_and_bind(npc, ini, "muggingSquadBehaviour", section, temp)
 end
 
-function add_to_binder(npc,ini,scheme,section,storage,temp)
+function add_to_binder(npc, ini, scheme, section, storage, temp)
 	if not npc then return end
 	local manager = npc:motivation_action_manager()
 	if not manager then return end
 	
 	if not npc:alive() or npc:section() == "actor_visual_stalker" then
-		manager:add_evaluator(evaid,property_evaluator_const(false))
+		manager:add_evaluator(evaid, property_evaluator_const(false))
 		temp.needs_configured = false
 		return 
 	end
 
-	local evaluator = evaluator_muggingSquadBehaviour(npc,"eva_muggingSquadBehaviour",storage)
-	temp.action = action_muggingSquadBehaviour(npc,"act_muggingSquadBehaviour",storage)
+	local evaluator = evaluator_muggingSquadBehaviour(npc, "eva_muggingSquadBehaviour", storage)
+	temp.action = action_muggingSquadBehaviour(npc, "act_muggingSquadBehaviour", storage)
 	
 	if not evaluator or not temp.action then return end
-	manager:add_evaluator(evaid,evaluator)
+	manager:add_evaluator(evaid, evaluator)
 	
-	temp.action:add_precondition(world_property(stalker_ids.property_alive,true))
+	temp.action:add_precondition(world_property(stalker_ids.property_alive, true))
 	-- temp.action:add_precondition(world_property(stalker_ids.property_danger, false))
-	temp.action:add_precondition(world_property(evaid,true))
+	temp.action:add_precondition(world_property(evaid, true))
 	
-	temp.action:add_effect(world_property(evaid,false))
+	temp.action:add_effect(world_property(evaid, false))
 	
-	manager:add_action(actid,temp.action)
+	manager:add_action(actid, temp.action)
 	
 	--xr_logic.subscribe_action_for_events(npc, storage, temp.action)
 end
 
-function configure_actions(npc,ini,scheme,section,stype,temp)
+function configure_actions(npc, ini, scheme, section, stype, temp)
 	if not npc then return end
 	local manager = npc:motivation_action_manager()
 	if not manager or not temp.action then return end
 
-	temp.action:add_precondition(world_property(xr_evaluators_id.sidor_wounded_base,false))
-	temp.action:add_precondition(world_property(xr_evaluators_id.wounded_exist,false))
+	temp.action:add_precondition(world_property(xr_evaluators_id.sidor_wounded_base, false))
+	temp.action:add_precondition(world_property(xr_evaluators_id.wounded_exist, false))
 
 	-- if (_G.schemes["rx_ff"]) then 
-	-- 	temp.action:add_precondition(world_property(rx_ff.evaid,false))
+	-- 	temp.action:add_precondition(world_property(rx_ff.evaid, false))
 	-- end
 	if (_G.schemes["gl"]) then
-		temp.action:add_precondition(world_property(rx_gl.evid_gl_reload,false))
+		temp.action:add_precondition(world_property(rx_gl.evid_gl_reload, false))
 	end
 	-- if (_G.schemes["facer"]) then
-	-- 	temp.action:add_precondition(world_property(xrs_facer.evid_facer,false))
-	-- 	temp.action:add_precondition(world_property(xrs_facer.evid_steal_up_facer,false))
+	-- 	temp.action:add_precondition(world_property(xrs_facer.evid_facer, false))
+	-- 	temp.action:add_precondition(world_property(xrs_facer.evid_steal_up_facer, false))
 	-- end
 
 	local action
@@ -936,14 +910,14 @@ function configure_actions(npc,ini,scheme,section,stype,temp)
 		--printf("ACTION_ALIFE_ID(demonized_muggingSquadBehaviour.configure_actions): " .. tostring(p[i]))
 		action = manager:action(p[i])
 		if (action) then
-			action:add_precondition(world_property(evaid,false))
+			action:add_precondition(world_property(evaid, false))
 		else
-			printf("axr_panic: no action id p[%s]",i)
+			printf("axr_panic: no action id p[%s]", i)
 		end
 	end
 end 
 
-function disable_generic_scheme(npc,scheme,stype)
+function disable_generic_scheme(npc, scheme, stype)
 	local st = db.storage[npc:id()][scheme]
 	if st then
 		st.enabled = false
@@ -952,7 +926,7 @@ end
 
 function npc_add_precondition(action)
 	if not action then return end
-	action:add_precondition(world_property(evaid,false))
+	action:add_precondition(world_property(evaid, false))
 end
 
 LoadScheme(script_name(), "muggingSquadBehaviour", modules.stype_stalker)
@@ -961,7 +935,7 @@ LoadScheme(script_name(), "muggingSquadBehaviour", modules.stype_stalker)
 local gt = game.translate_string
 local GetTalkingNpc = mob_trade.GetTalkingNpc or function()
 	--log("~GetTalkingNpc:->:tData.oNpc:clsid() == clsid.script_trader")
-	for k,v in pairs(db.storage) do
+	for k, v in pairs(db.storage) do
 		local oNpc = v.object
 		if oNpc ~= nil then
 			if oNpc:is_talking() and oNpc:id() ~= AC_ID then
