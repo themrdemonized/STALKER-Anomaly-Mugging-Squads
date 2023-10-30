@@ -869,6 +869,12 @@ function action_muggingSquadBehaviour:execute()
 		end
 
 		if self.chosenSmart then
+			if self.isCommander then
+				if npc:level_vertex_id() == self.chosenSmart.m_level_vertex_id then
+					invalidateSquad(self.squad)
+					return
+				end
+			end
 			local se = alife_object(self.squad.id)
 			se.scripted_target = self.chosenSmart:name()
 			se.rush_to_target = true
@@ -1010,33 +1016,86 @@ local function getNpcAndActor(a, b)
 	return npc, actor
 end
 
+local talkingMuggingSquadInfo
+local function clearTalkingMuggingSquadInfo()
+	talkingMuggingSquadInfo = nil
+end
+
+-- Determine what squad wants from actor
+-- Returns a table with texts that will determine what squad wants and a function that will be applied in demonized_mugging_squads_give_my_stuff function
+function pickMuggingOption(squad, npc, actor)
+	local faction = character_community(npc)
+	local actorFaction = character_community(actor)
+	local count = squad:npc_count()
+	return {
+		whoAreYouText = function()
+			local s = gt("mugging_who_are_you")
+			return s or ""
+		end,
+		requestText = function()
+			local s = gt("mugging_give_me_stuff")
+			return s or ""
+		end,
+		requestFunc = function()
+			dialogs.relocate_money(npc, actor:money(), "out")
+		end,
+		agreeText = function()
+			local s = gt("mugging_here_is_my_stuff")
+			return s or ""
+		end,
+		rejectText = function()
+			local s = gt("mugging_fuck_you_and_start_fight")
+			return s or ""
+		end,
+		GTFOText = function()
+			local s = gt("mugging_thank_you_and_gtfo")
+			return s or ""
+		end,
+		GTFOOkText = function()
+			local s = gt("mugging_ok")
+			return s or ""
+		end,
+	}
+end
+
 function dialogs.demonized_mugging_squads_prepare_dialog_info(a, b)
-	-- local npc = GetTalkingNpc()
+	local npc, actor = GetTalkingNpc(a, b)
+	local squad = get_object_squad(npc)
+	talkingMuggingSquadInfo = {
+		count = squad:npc_count(),
+		squad = squad,
+		faction = character_community(npc),
+		option = pickMuggingOption(squad, npc, actor),
+	}
+end
+
+function dialogs.demonized_mugging_squads_text_stop_right_there()
+	local s = gt("mugging_stop_right_there")
+	return s or ""
+end
+
+function dialogs.demonized_mugging_squads_text_who_are_you()
+	return talkingMuggingSquadInfo.option.whoAreYouText()
 end
 
 function dialogs.demonized_mugging_squads_text_give_me_stuff()
-	local s = gt("mugging_give_me_stuff")
-	return s or ""
+	return talkingMuggingSquadInfo.option.requestText()
 end
 
 function dialogs.demonized_mugging_squads_text_here_is_my_stuff()
-	local s = gt("mugging_here_is_my_stuff")
-	return s or ""
+	return talkingMuggingSquadInfo.option.agreeText()
 end
 
 function dialogs.demonized_mugging_squads_give_my_stuff(a, b)
-	local npc, actor = getNpcAndActor(a, b)
-	dialogs.relocate_money(npc, db.actor:money(), "out")
+	talkingMuggingSquadInfo.option.requestFunc()
 end     
 
 function dialogs.demonized_mugging_squads_text_thank_you_and_gtfo()
-	local s = gt("mugging_thank_you_and_gtfo")
-	return s or ""
+	return talkingMuggingSquadInfo.option.GTFOText()
 end
 
 function dialogs.demonized_mugging_squads_text_ok()
-	local s = gt("mugging_ok")
-	return s or ""
+	return talkingMuggingSquadInfo.option.GTFOOkText()
 end
 
 function dialogs.demonized_mugging_squads_break_dialog(a, b)
@@ -1046,11 +1105,11 @@ function dialogs.demonized_mugging_squads_break_dialog(a, b)
 	if squad then
 		setSquadStage(squad, squadStages.done)
 	end
+	clearTalkingMuggingSquadInfo()
 end
 
 function dialogs.demonized_mugging_squads_text_fuck_you_and_start_fight()
-	local s = gt("mugging_fuck_you_and_start_fight")
-	return s or ""
+	return talkingMuggingSquadInfo.option.rejectText()
 end
 
 function dialogs.demonized_mugging_squads_fuck_you_and_start_fight(a, b)
@@ -1059,4 +1118,5 @@ function dialogs.demonized_mugging_squads_fuck_you_and_start_fight(a, b)
 	local squad = get_object_squad(npc)
 	invalidateSquad(squad)
 	setSquadAsEnemy(squad)
+	clearTalkingMuggingSquadInfo()
 end

@@ -4,8 +4,16 @@
 	<dialog id="muggingDialogGiveMeYourShit">
 		<phrase_list>
 			<phrase id="0">
-				<script_text>dialogs.demonized_mugging_squads_text_give_me_stuff</script_text>
+				<script_text>dialogs.demonized_mugging_squads_text_stop_right_there</script_text>
 				<action>dialogs.demonized_mugging_squads_prepare_dialog_info</action>
+				<next>1</next>
+			</phrase>
+			<phrase id="1">
+				<script_text>dialogs.demonized_mugging_squads_text_who_are_you</script_text>
+				<next>2</next>
+			</phrase>
+			<phrase id="2">
+				<script_text>dialogs.demonized_mugging_squads_text_give_me_stuff</script_text>
 				<next>10</next>
 				<next>20</next>
 			</phrase>
