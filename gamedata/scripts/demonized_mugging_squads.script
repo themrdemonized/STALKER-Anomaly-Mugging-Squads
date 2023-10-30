@@ -330,6 +330,10 @@ end
 function isSquadCommanderVisible(squad)
 	local obj = squad:commander_id() and level.object_by_id(squad:commander_id())
 	if obj then
+		if obj:position():distance_to_sqr(db.actor:position()) < 50^2 then
+			return true
+		end
+
 		local screenpos = game.world2ui(obj)
 		if screenpos.x > 0 and screenpos.x < 1024 and screenpos.y > 0 and screenpos.y < 768 then
 			if db.actor:see(obj) then
@@ -689,6 +693,7 @@ function action_muggingSquadBehaviour:initialize()
 	self.isCommander = self.squad:commander_id() and level.object_by_id(self.squad:commander_id()) and level.object_by_id(self.squad:commander_id()) == npc:id()
 
 	local activeMembers = {}
+	local squad = self.squad
 	for k in squad:squad_members() do
 		local obj = level.object_by_id(k.id)
 		if obj then
@@ -743,6 +748,7 @@ function action_muggingSquadBehaviour:findPos()
 	local npc = self.object
 	local id = npc:id()
 	local base_point = npc:level_vertex_id()
+	local base_point_pos = npc:position()
 	local tries = 10
 	
 	for i = 1, tries do
@@ -763,8 +769,8 @@ function action_muggingSquadBehaviour:findPos()
 
 		dir:normalize()
 		local pos = db.actor:position():mad(dir, 2)
-		local dist = pos:distance_to(base_point)
-		dir = vector():set(pos):sub(base_point):normalize()
+		local dist = pos:distance_to(base_point_pos)
+		dir = vector():set(pos):sub(base_point_pos):normalize()
 
 		for radius = dist, 1, -1 do
 			local lvid = level.vertex_in_direction(base_point, dir, radius)
@@ -812,15 +818,77 @@ function action_muggingSquadBehaviour:execute()
 		-- Set sight in direction of new lvid and confirm the state
 		-- npc:set_sight(look.direction, lvid and level.vertex_position(lvid):sub(npc:position()):normalize() or npc:direction())
 		state_mgr.set_state(npc, new_state, nil, nil, {
-			look_position = utils_obj.safe_bone_pos(db.actor, "bip01_head"),
+			-- look_position = utils_obj.safe_bone_pos(db.actor, "bip01_head"),
 			look_object = db.actor,
-			look_dir = utils_obj.safe_bone_pos(npc, "bip01_head"):sub(utils_obj.safe_bone_pos(db.actor, "bip01_head")):normalize(),
+			-- look_dir = utils_obj.safe_bone_pos(npc, "bip01_head"):sub(utils_obj.safe_bone_pos(db.actor, "bip01_head")):normalize(),
 		}, {
 			fast_set = true,
 			animation = false,
 		})
 	elseif squad.stage == squadStages.done then
 		-- Find a smart for mugging squad to move
+		if not self.chosenSmart then
+			local safeSmarts = getSafeSmarts()
+			local smartCandidates = {}
+			local dir = db.actor:direction()
+			dir.y = 0
+			dir:normalize()
+
+			for name, smart in pairs(currentLevelSmarts) do
+				if not safeSmarts[name] then
+					local pos = vector():set(smart.position)
+					local dirToActor = pos:sub(db.actor:position()):normalize()
+					dirToActor.y = 0
+					dirToActor:normalize()
+					if dirToActor:dotproduct(dir) > 0 then
+						smartCandidates[#smartCandidates + 1] = smart
+					end
+				end
+			end
+			if is_empty(smartCandidates) then
+				for name, smart in pairs(currentLevelSmarts) do
+					if not safeSmarts[name] then
+						smartCandidates[#smartCandidates + 1] = smart
+					end
+				end
+			end
+			if is_empty(smartCandidates) then
+				for name, smart in pairs(currentLevelSmarts) do
+					smartCandidates[#smartCandidates + 1] = smart
+				end
+			end
+
+			local minDist = 0
+			for i, smart in ipairs(smartCandidates) do
+				local dist = smart.position:distance_to_sqr(db.actor:position())
+				if dist > minDist then
+					minDist = dist
+					self.chosenSmart = smart
+				end
+			end
+		end
+
+		if self.chosenSmart then
+			local se = alife_object(self.squad.id)
+			se.scripted_target = self.chosenSmart:name()
+			se.rush_to_target = true
+
+			local smart = self.chosenSmart
+			local new_state = "sprint"
+			local lvid = smart.m_level_vertex_id
+			self.st.vid = lvid
+
+			npc:set_dest_level_vertex_id(lvid)
+
+			state_mgr.set_state(npc, new_state, nil, nil, {
+				-- look_position = utils_obj.safe_bone_pos(db.actor, "bip01_head"),
+				-- look_object = db.actor,
+				-- look_dir = utils_obj.safe_bone_pos(npc, "bip01_head"):sub(utils_obj.safe_bone_pos(db.actor, "bip01_head")):normalize(),
+			}, {
+				fast_set = false,
+				animation = true,
+			})
+		end		
 	end
 
 	-- First update force movement 
@@ -842,6 +910,7 @@ function action_muggingSquadBehaviour:finalize()
 		db.used_level_vertex_ids[self.st.vid] = nil
 	end
 	self.st.vid = nil
+	self.chosenSmart = nil
 
 	local npc = self.object
 	npc:clear_animations()
@@ -933,17 +1002,7 @@ LoadScheme(script_name(), "muggingSquadBehaviour", modules.stype_stalker)
 
 -- Dialogs
 local gt = game.translate_string
-local GetTalkingNpc = mob_trade.GetTalkingNpc or function()
-	--log("~GetTalkingNpc:->:tData.oNpc:clsid() == clsid.script_trader")
-	for k, v in pairs(db.storage) do
-		local oNpc = v.object
-		if oNpc ~= nil then
-			if oNpc:is_talking() and oNpc:id() ~= AC_ID then
-				return oNpc
-			end
-		end
-	end
-end
+local GetTalkingNpc = mob_trade.GetTalkingNpc
 
 local function getNpcAndActor(a, b)
 	local npc = a:id() == AC_ID and b or a
