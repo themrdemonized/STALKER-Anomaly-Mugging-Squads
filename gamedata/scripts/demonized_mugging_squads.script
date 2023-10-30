@@ -796,7 +796,7 @@ function action_muggingSquadBehaviour:execute()
 	if squad.stage == squadStages.talk then
 		-- Set panic state
 		local bw = npc:active_item()
-		local new_state = "sprint"
+		local new_state = "panic"
 		local lvid = self.isCommander and npc:level_vertex_id()
 
 		-- Find new lvid to reach
@@ -880,7 +880,7 @@ function action_muggingSquadBehaviour:execute()
 			se.rush_to_target = true
 
 			local smart = self.chosenSmart
-			local new_state = "sprint"
+			local new_state = "panic"
 			local lvid = smart.m_level_vertex_id
 			self.st.vid = lvid
 
@@ -1008,7 +1008,6 @@ LoadScheme(script_name(), "muggingSquadBehaviour", modules.stype_stalker)
 
 -- Dialogs
 local gt = game.translate_string
-local GetTalkingNpc = mob_trade.GetTalkingNpc
 
 local function getNpcAndActor(a, b)
 	local npc = a:id() == AC_ID and b or a
@@ -1059,7 +1058,7 @@ function pickMuggingOption(squad, npc, actor)
 end
 
 function dialogs.demonized_mugging_squads_prepare_dialog_info(a, b)
-	local npc, actor = GetTalkingNpc(a, b)
+	local npc, actor = getNpcAndActor(a, b)
 	local squad = get_object_squad(npc)
 	talkingMuggingSquadInfo = {
 		count = squad:npc_count(),
@@ -1098,6 +1097,10 @@ function dialogs.demonized_mugging_squads_text_ok()
 	return talkingMuggingSquadInfo.option.GTFOOkText()
 end
 
+function dialogs.demonized_mugging_squads_text_fuck_you_and_start_fight()
+	return talkingMuggingSquadInfo.option.rejectText()
+end
+
 function dialogs.demonized_mugging_squads_break_dialog(a, b)
 	dialogs.break_dialog(a, b)
 	local npc, actor = getNpcAndActor(a, b)
@@ -1106,10 +1109,6 @@ function dialogs.demonized_mugging_squads_break_dialog(a, b)
 		setSquadStage(squad, squadStages.done)
 	end
 	clearTalkingMuggingSquadInfo()
-end
-
-function dialogs.demonized_mugging_squads_text_fuck_you_and_start_fight()
-	return talkingMuggingSquadInfo.option.rejectText()
 end
 
 function dialogs.demonized_mugging_squads_fuck_you_and_start_fight(a, b)
