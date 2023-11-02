@@ -6,6 +6,22 @@ op = { id= "demonized_mugging_squads",sh=true ,gr={
 		{ id= "title", type= "slide", link= "ui_options_slider_player", text="ui_mcm_demonized_mugging_squads_title", size= {512,50}, spacing= 20 },
 		{id = "allowSameSquads", type = "check", val = 1, def = false},
 		{id = "allowFriendlySquads", type = "check", val = 1, def = false},
+
+		{id = "divider", type = "line"},
+
+		-- These factions can send mugging squads after you
+		{id = "muggingFactionsCanSpawn_army", type = "check", val = 1, def = false},
+		{id = "muggingFactionsCanSpawn_bandit", type = "check", val = 1, def = true},
+		{id = "muggingFactionsCanSpawn_csky", type = "check", val = 1, def = false},
+		{id = "muggingFactionsCanSpawn_dolg", type = "check", val = 1, def = false},
+		{id = "muggingFactionsCanSpawn_ecolog", type = "check", val = 1, def = false},
+		{id = "muggingFactionsCanSpawn_freedom", type = "check", val = 1, def = false},
+		{id = "muggingFactionsCanSpawn_greh", type = "check", val = 1, def = true},
+		{id = "muggingFactionsCanSpawn_isg", type = "check", val = 1, def = false},
+		{id = "muggingFactionsCanSpawn_killer", type = "check", val = 1, def = true},
+		{id = "muggingFactionsCanSpawn_monolith", type = "check", val = 1, def = true},
+		{id = "muggingFactionsCanSpawn_renegade", type = "check", val = 1, def = true},
+		{id = "muggingFactionsCanSpawn_stalker", type = "check", val = 1, def = false},
 	}
 }
 

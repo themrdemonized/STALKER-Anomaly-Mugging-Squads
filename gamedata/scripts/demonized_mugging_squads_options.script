@@ -41,22 +41,6 @@
 -- Duty
 -- Freedom
 
--- These factions can send mugging squads after you
-faction_list = {
-	-- "army",
-	"bandit",
-	-- "csky",
-	-- "dolg",
-	-- "ecolog",
-	-- "freedom",
-	"greh",
-	-- "isg",
-	"killer",
-	"monolith",
-	"renegade",
-	-- "stalker",
-}
-
 -- Define faction dialogs
 mugging_options = {
 	["army"] = "give_all_money",
@@ -127,18 +111,18 @@ factions_to_levels = {}
 
 -- Mugging squad sections
 faction_squads = {	
-	["army"]     = "army_sim_squad_alpha, army_sim_squad_advanced, army_sim_squad_novice, army_sim_squad_veteran",
-	["bandit"]   = "bandit_sim_squad_novice, bandit_sim_squad_advanced, bandit_sim_squad_veteran, bandit_sim_squad_alpha",
-	["csky"]     = "csky_sim_squad_alpha, csky_sim_squad_novice, csky_sim_squad_advanced, csky_sim_squad_veteran",
-	["dolg"]     = "dolg_sim_squad_alpha, duty_sim_squad_novice, duty_sim_squad_advanced, duty_sim_squad_veteran",
-	["ecolog"]	 = "ecolog_sim_squad_novice, ecolog_sim_squad_advanced, ecolog_sim_squad_veteran",
-	["freedom"]  = "freedom_sim_squad_alpha, freedom_sim_squad_novice, freedom_sim_squad_advanced, freedom_sim_squad_veteran",
-	["greh"]	 = "greh_sim_squad_alpha, greh_sim_squad_novice, greh_sim_squad_advanced, greh_sim_squad_veteran",
-	["isg"]		 = "isg_sim_squad_alpha, isg_sim_squad_novice, isg_sim_squad_advanced, isg_sim_squad_veteran",
-	["killer"]   = "killer_sim_squad_alpha, merc_sim_squad_novice, merc_sim_squad_advanced, merc_sim_squad_veteran",
-	["monolith"] = "monolith_sim_squad_alpha, monolith_sim_squad_novice, monolith_sim_squad_advanced, monolith_sim_squad_veteran",
-	["renegade"] = "renegade_sim_squad_alpha, renegade_sim_squad_novice, renegade_sim_squad_advanced, renegade_sim_squad_veteran",
-	["stalker"]  = "stalker_sim_squad_alpha, stalker_sim_squad_novice, stalker_sim_squad_advanced, stalker_sim_squad_veteran",
+	["army"]     = "army_sim_squad_alpha, army_sim_squad_advanced, army_sim_squad_veteran",
+	["bandit"]   = "bandit_sim_squad_advanced, bandit_sim_squad_veteran, bandit_sim_squad_alpha",
+	["csky"]     = "csky_sim_squad_alpha, csky_sim_squad_advanced, csky_sim_squad_veteran",
+	["dolg"]     = "dolg_sim_squad_alpha, duty_sim_squad_advanced, duty_sim_squad_veteran",
+	["ecolog"]	 = "ecolog_sim_squad_advanced, ecolog_sim_squad_veteran",
+	["freedom"]  = "freedom_sim_squad_alpha, freedom_sim_squad_advanced, freedom_sim_squad_veteran",
+	["greh"]	 = "greh_sim_squad_alpha, greh_sim_squad_advanced, greh_sim_squad_veteran",
+	["isg"]		 = "isg_sim_squad_alpha, isg_sim_squad_advanced, isg_sim_squad_veteran",
+	["killer"]   = "killer_sim_squad_alpha, merc_sim_squad_advanced, merc_sim_squad_veteran",
+	["monolith"] = "monolith_sim_squad_alpha, monolith_sim_squad_advanced, monolith_sim_squad_veteran",
+	["renegade"] = "renegade_sim_squad_alpha, renegade_sim_squad_advanced, renegade_sim_squad_veteran",
+	["stalker"]  = "stalker_sim_squad_alpha, stalker_sim_squad_advanced, stalker_sim_squad_veteran",
 }
 
 -- Player ranks and the number of possible bounty squad to spawn when a rank is met
