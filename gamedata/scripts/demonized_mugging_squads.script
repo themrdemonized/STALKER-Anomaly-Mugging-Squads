@@ -291,6 +291,7 @@ function forceTalk(npc)
 		npc:set_start_dialog("muggingDialogGiveMeYourShit")
 		RegisterScriptCallback("actor_on_update", updateTalk)
 		save_var(db.actor, "force_all_talk", true)
+		npc:allow_break_talk_dialog(false)
 	    db.actor:run_talk_dialog(npc, true)
 	end
 end
@@ -1030,6 +1031,7 @@ end
 local talkingMuggingSquadInfo
 local function clearTalkingMuggingSquadInfo()
 	talkingMuggingSquadInfo = nil
+	math.randomseed(os.time())
 end
 
 function getRandomTranslatedText(st, faction, defaultFaction, defaultSt)
@@ -1052,12 +1054,19 @@ function relocateEverythingFromActor(npc)
 	actor:iterate_inventory(itr, actor)
 end
 
+-- These items will never be requested
+ignoreItemsToMug = {
+	bolt = true,
+	bolt_bullet = true,
+}
 function chooseRandomItemsFromActor(npc, amount)
 	local actor = db.actor
 	local items = {}
 
 	local function itr(_, obj)
-		items[#items + 1] = obj
+		if not ignoreItemsToMug[obj:section()] then
+			items[#items + 1] = obj
+		end
 	end
 	actor:iterate_inventory(itr, actor)
 
@@ -1070,7 +1079,7 @@ function chooseRandomItemsFromActor(npc, amount)
 
 	talkingMuggingSquadInfo.chosenItems = {}
 	while is_not_empty(items) and amount > 0 do
-		table.insert(talkingMuggingSquadInfo.chosenItem, table.remove(items))
+		table.insert(talkingMuggingSquadInfo.chosenItems, table.remove(items))
 		amount = amount - 1
 	end
 	return talkingMuggingSquadInfo.chosenItems
@@ -1101,9 +1110,33 @@ function pickMuggingOption(squad, npc, actor)
 	local GTFOText
 	local GTFOOkText
 
+	-- Defaults
+	whoAreYouText = function()
+		return gt("mugging_who_are_you") or ""
+	end
+	requestText = function()
+		return gt("mugging_give_me_stuff") or ""
+	end
+	requestFunc = function()
+		dialogs.relocate_money(npc, actor:money(), "out")
+	end
+	agreeText = function()
+		return gt("mugging_here_is_my_stuff") or ""
+	end
+	rejectText = function()
+		return gt("mugging_fuck_you_and_start_fight") or ""
+	end
+	GTFOText = function()
+		return gt("mugging_thank_you_and_gtfo") or ""
+	end
+	GTFOOkText = function()
+		return gt("mugging_ok") or ""
+	end
+
+	-- Bandits or Renegades
 	if faction == "bandit" or faction == "renegade" then
-		-- 10% chance that they want all items
-		if math.random() < 0.1 then
+		-- 15% chance that they want all items
+		if math.random() < 0.15 then
 			requestText = function()
 				return getRandomTranslatedText("mugging_give_me_all_stuff_", faction, "bandit", "mugging_give_me_all_stuff")
 			end
@@ -1129,12 +1162,12 @@ function pickMuggingOption(squad, npc, actor)
 					local items = chooseRandomItemsFromActor(npc, math.random(5))
 					local s = getRandomTranslatedText("mugging_give_me_some_item_", faction, "bandit", "mugging_give_me_some_item")
 					for _, item in ipairs(items) do
-						s = s .. "\\n â€¢ " .. ui_item.get_sec_name(item:section())
+						s = s .. "\\n • " .. ui_item.get_sec_name(item:section())
 					end
 					return s
 				end
 				requestFunc = function()
-					relocateChosenItemsFromActor(npc, talkingMuggingSquadInfo.chosenItem)
+					relocateChosenItemsFromActor(npc, talkingMuggingSquadInfo.chosenItems)
 				end
 			else
 				requestText = function()
@@ -1158,28 +1191,6 @@ function pickMuggingOption(squad, npc, actor)
 				return getRandomTranslatedText("mugging_next_time_ill_get_my_stuff_back_", faction, "bandit", "mugging_next_time_ill_get_my_stuff_back")
 			end
 		end
-	else
-		whoAreYouText = function()
-			return gt("mugging_who_are_you") or ""
-		end
-		requestText = function()
-			return gt("mugging_give_me_stuff") or ""
-		end
-		requestFunc = function()
-			dialogs.relocate_money(npc, actor:money(), "out")
-		end
-		agreeText = function()
-			return gt("mugging_here_is_my_stuff") or ""
-		end
-		rejectText = function()
-			return gt("mugging_fuck_you_and_start_fight") or ""
-		end
-		GTFOText = function()
-			return gt("mugging_thank_you_and_gtfo") or ""
-		end
-		GTFOOkText = function()
-			return gt("mugging_ok") or ""
-		end
 	end
 	return {
 		whoAreYouText = whoAreYouText,
@@ -1193,6 +1204,12 @@ function pickMuggingOption(squad, npc, actor)
 end
 
 function dialogs.demonized_mugging_squads_prepare_dialog_info(a, b)
+	local gameTime = game.get_game_time()
+	local Y, M, D, h, m, s, ms = 0, 0, 0, 0, 0, 0, 0
+	Y, M, D, h, m, s, ms = gameTime:get(Y, M, D, h, m, s, ms)
+	local seed = tonumber(Y .. M .. D .. h)
+	math.randomseed(seed)
+	
 	local npc, actor = getNpcAndActor(a, b)
 	local squad = get_object_squad(npc)
 	talkingMuggingSquadInfo = {
@@ -1200,6 +1217,7 @@ function dialogs.demonized_mugging_squads_prepare_dialog_info(a, b)
 		squad = squad,
 		faction = character_community(npc),
 		option = pickMuggingOption(squad, npc, actor),
+		seed = seed
 	}
 end
 
