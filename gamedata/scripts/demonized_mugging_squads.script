@@ -10,6 +10,10 @@
 -- For the give me stuff part, it is possible to have the most common outcome being money/one item and then a rare chance of them taking all your shit
 -- Oh, and playing a sound upon mugging, can you make it like only a 50% chance that it happens
 
+-- Settings
+delaySpawn = 30 -- real seconds
+delayState = 10	-- real seconds
+
 local id = 70000
 local idOffset = 0
 local gizmos = {
@@ -87,7 +91,7 @@ function load_settings()
 	return settings
 end
 
-function roundVec(v, num)
+local function roundVec(v, num)
 	return vector():set(
 		round_idp(v.x, num),
 		round_idp(v.y, num),
@@ -95,15 +99,17 @@ function roundVec(v, num)
 	)
 end
 
+local function shuffle(t)
+   	local random = math.random
+   	for i = #t, 2, -1 do
+     	local j = random(i)
+     	t[i], t[j] = t[j], t[i]
+   	end
+end
+
 activeSquads = {}	-- current active mugging squads
-delay = 60*60*24 -- game seconds
-delaySpawn = 60 -- real seconds
-delayState = 10	-- real seconds
-spawnDistance = 200^2	-- don't spawn mugging squads below this distance
-safeSmartDistance = 40^2 -- don't spawn mugging squads if player is near safe smart
 
 local lastSpawnTime	-- the last time a mugging squad has been spawned
-
 local currentLevelSmarts = {}
 local linkedLevelSmarts = {}
 
@@ -127,7 +133,6 @@ end
 
 function invalidateSquad(squad)
 	print_tip("squad %s is invalidated", squad.id)
-	-- attack(false, false)
 	activeSquads[squad.id] = nil
 end
 
@@ -205,6 +210,7 @@ function trySpawn()
 	local spawn_smrts = {}
 	for name, smart in pairs(currentLevelSmarts) do
 		local dist = smart.position:distance_to_sqr(db.actor:position())
+		local spawnDistance = settings.spawnDistance * settings.spawnDistance
 		if dist > spawnDistance then
 			local smrt = SIMBOARD.smarts[smart.id]
 			if smrt then
@@ -321,6 +327,7 @@ function spawnTimer()
 	end
 	
 	-- ignore if timer hasn't been reached yet
+	local delay = settings.delayBetweenSpawns * 60 * 60
 	if current_time:diffSec(lastSpawnTime) < delay then
 		return false
 	end
@@ -482,6 +489,7 @@ function stateTimer()
 	for name, smart in pairs(currentLevelSmarts) do
 		if safeSmarts[name] then
 			local dist = smart.position:distance_to_sqr(pos)
+			local safeSmartDistance = settings.safeSmartDistance * settings.safeSmartDistance
 			if dist < safeSmartDistance then
 				attack(false, false)
 				return false
@@ -1053,9 +1061,16 @@ function chooseRandomItemsFromActor(npc, amount)
 	end
 	actor:iterate_inventory(itr, actor)
 
+	--50% chance that they want max cost items
+	if math.random() < 0.5 then
+		table.sort(items, function(a, b) return a:cost() < b:cost() end)
+	else
+		shuffle(items)
+	end
+
 	talkingMuggingSquadInfo.chosenItems = {}
 	while is_not_empty(items) and amount > 0 do
-		table.insert(talkingMuggingSquadInfo.chosenItem, table.remove(items, math.random(#items)))
+		table.insert(talkingMuggingSquadInfo.chosenItem, table.remove(items))
 		amount = amount - 1
 	end
 	return talkingMuggingSquadInfo.chosenItems
@@ -1114,7 +1129,7 @@ function pickMuggingOption(squad, npc, actor)
 					local items = chooseRandomItemsFromActor(npc, math.random(5))
 					local s = getRandomTranslatedText("mugging_give_me_some_item_", faction, "bandit", "mugging_give_me_some_item")
 					for _, item in ipairs(items) do
-						s = s .. item:section() .. "\\n"
+						s = s .. "\\n • " .. ui_item.get_sec_name(item:section())
 					end
 					return s
 				end
