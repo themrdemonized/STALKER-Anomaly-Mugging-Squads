@@ -1096,12 +1096,9 @@ function relocateChosenItemsFromActor(npc, items)
 end
 
 -- Determine what squad wants from actor
--- Returns a table with texts that will determine what squad wants and a function that will be applied in demonized_mugging_squads_give_my_stuff function
-function pickMuggingOption(squad, npc, actor)
-	local faction = character_community(npc)
-	local actorFaction = character_community(actor)
-	local count = squad:npc_count()
-
+-- Below are lists of functions that returns a table with texts that will determine what squad wants and a function that will be applied in demonized_mugging_squads_give_my_stuff function
+-- Defaults
+function defaultMuggingOption(squad, npc, actor)
 	local whoAreYouText
 	local requestText
 	local requestFunc
@@ -1110,7 +1107,6 @@ function pickMuggingOption(squad, npc, actor)
 	local GTFOText
 	local GTFOOkText
 
-	-- Defaults
 	whoAreYouText = function()
 		return gt("mugging_who_are_you") or ""
 	end
@@ -1133,64 +1129,97 @@ function pickMuggingOption(squad, npc, actor)
 		return gt("mugging_ok") or ""
 	end
 
-	-- Bandits or Renegades
-	if faction == "bandit" or faction == "renegade" then
-		-- 15% chance that they want all items
-		if math.random() < 0.15 then
-			requestText = function()
-				return getRandomTranslatedText("mugging_give_me_all_stuff_", faction, "bandit", "mugging_give_me_all_stuff")
-			end
-			requestFunc = function()
-				relocateEverythingFromActor(npc)
-			end
-			agreeText = function()
-				return getRandomTranslatedText("mugging_here_is_all_my_stuff_", faction, "bandit", "mugging_here_is_all_my_stuff")
-			end
-			rejectText = function()
-				return getRandomTranslatedText("mugging_fight_me_for_my_all_stuff_", faction, "bandit", "mugging_fight_me_for_my_stuff")
-			end
-			GTFOText = function()
-				return getRandomTranslatedText("mugging_thank_you_for_all_stuff_and_gtfo_", faction, "bandit", "mugging_thank_you_for_all_stuff_and_gtfo")
-			end
-			GTFOOkText = function()
-				return getRandomTranslatedText("mugging_next_time_ill_get_all_my_stuff_back_", faction, "bandit", "mugging_next_time_ill_get_all_my_stuff_back")
-			end
-		else
-			-- choose either money or one item
-			if math.random() < 0.5 then
-				requestText = function()
-					local items = chooseRandomItemsFromActor(npc, math.random(5))
-					local s = getRandomTranslatedText("mugging_give_me_some_item_", faction, "bandit", "mugging_give_me_some_item")
-					for _, item in ipairs(items) do
-						s = s .. "\\n • " .. ui_item.get_sec_name(item:section())
-					end
-					return s
-				end
-				requestFunc = function()
-					relocateChosenItemsFromActor(npc, talkingMuggingSquadInfo.chosenItems)
-				end
-			else
-				requestText = function()
-					return getRandomTranslatedText("mugging_give_me_money_", faction, "bandit", "mugging_give_me_money")
-				end
-				requestFunc = function()
-					dialogs.relocate_money(npc, actor:money(), "out")
-				end
-			end
-			
-			agreeText = function()
-				return getRandomTranslatedText("mugging_here_is_my_stuff_", faction, "bandit", "mugging_here_is_my_stuff")
-			end
-			rejectText = function()
-				return getRandomTranslatedText("mugging_fuck_you_and_start_fight_", faction, "bandit", "mugging_fuck_you_and_start_fight")
-			end
-			GTFOText = function()
-				return getRandomTranslatedText("mugging_thank_you_for_stuff_and_gtfo_", faction, "bandit", "mugging_thank_you_for_stuff_and_gtfo")
-			end
-			GTFOOkText = function()
-				return getRandomTranslatedText("mugging_next_time_ill_get_my_stuff_back_", faction, "bandit", "mugging_next_time_ill_get_my_stuff_back")
-			end
-		end
+	return {
+		whoAreYouText = whoAreYouText,
+		requestText = requestText, 
+		requestFunc = requestFunc, 
+		agreeText = agreeText, 
+		rejectText = rejectText, 
+		GTFOText = GTFOText, 
+		GTFOOkText = GTFOOkText, 
+	}
+end
+
+-- Get all items from actor
+function allItemsMuggingOption(squad, npc, actor)
+	local faction = character_community(npc)
+	local actorFaction = character_community(actor)
+	local count = squad:npc_count()
+
+	local whoAreYouText
+	local requestText
+	local requestFunc
+	local agreeText
+	local rejectText
+	local GTFOText
+	local GTFOOkText
+
+	whoAreYouText = function()
+		return gt("mugging_who_are_you") or ""
+	end
+	requestText = function()
+		return getRandomTranslatedText("mugging_give_me_all_stuff_", faction, "bandit", "mugging_give_me_all_stuff")
+	end
+	requestFunc = function()
+		relocateEverythingFromActor(npc)
+	end
+	agreeText = function()
+		return getRandomTranslatedText("mugging_here_is_all_my_stuff_", faction, "bandit", "mugging_here_is_all_my_stuff")
+	end
+	rejectText = function()
+		return getRandomTranslatedText("mugging_fight_me_for_my_all_stuff_", faction, "bandit", "mugging_fight_me_for_my_stuff")
+	end
+	GTFOText = function()
+		return getRandomTranslatedText("mugging_thank_you_for_all_stuff_and_gtfo_", faction, "bandit", "mugging_thank_you_for_all_stuff_and_gtfo")
+	end
+	GTFOOkText = function()
+		return getRandomTranslatedText("mugging_next_time_ill_get_all_my_stuff_back_", faction, "bandit", "mugging_next_time_ill_get_all_my_stuff_back")
+	end
+
+	return {
+		whoAreYouText = whoAreYouText,
+		requestText = requestText, 
+		requestFunc = requestFunc, 
+		agreeText = agreeText, 
+		rejectText = rejectText, 
+		GTFOText = GTFOText, 
+		GTFOOkText = GTFOOkText, 
+	}
+end
+
+function moneyMuggingOption(squad, npc, actor)
+	local faction = character_community(npc)
+	local actorFaction = character_community(actor)
+	local count = squad:npc_count()
+
+	local whoAreYouText
+	local requestText
+	local requestFunc
+	local agreeText
+	local rejectText
+	local GTFOText
+	local GTFOOkText
+	
+	whoAreYouText = function()
+		return gt("mugging_who_are_you") or ""
+	end
+	requestText = function()
+		return getRandomTranslatedText("mugging_give_me_money_", faction, "bandit", "mugging_give_me_money")
+	end
+	requestFunc = function()
+		dialogs.relocate_money(npc, actor:money(), "out")
+	end
+	agreeText = function()
+		return getRandomTranslatedText("mugging_here_is_my_stuff_", faction, "bandit", "mugging_here_is_my_stuff")
+	end
+	rejectText = function()
+		return getRandomTranslatedText("mugging_fuck_you_and_start_fight_", faction, "bandit", "mugging_fuck_you_and_start_fight")
+	end
+	GTFOText = function()
+		return getRandomTranslatedText("mugging_thank_you_for_stuff_and_gtfo_", faction, "bandit", "mugging_thank_you_for_stuff_and_gtfo")
+	end
+	GTFOOkText = function()
+		return getRandomTranslatedText("mugging_next_time_ill_get_my_stuff_back_", faction, "bandit", "mugging_next_time_ill_get_my_stuff_back")
 	end
 	return {
 		whoAreYouText = whoAreYouText,
@@ -1203,13 +1232,95 @@ function pickMuggingOption(squad, npc, actor)
 	}
 end
 
+function someItemsMuggingOption(squad, npc, actor)
+	local faction = character_community(npc)
+	local actorFaction = character_community(actor)
+	local count = squad:npc_count()
+
+	local whoAreYouText
+	local requestText
+	local requestFunc
+	local agreeText
+	local rejectText
+	local GTFOText
+	local GTFOOkText
+	
+	whoAreYouText = function()
+		return gt("mugging_who_are_you") or ""
+	end
+	requestText = function()
+		local items = chooseRandomItemsFromActor(npc, math.random(5))
+		local s = getRandomTranslatedText("mugging_give_me_some_item_", faction, "bandit", "mugging_give_me_some_item")
+		for _, item in ipairs(items) do
+			s = s .. "\\n • " .. ui_item.get_sec_name(item:section())
+		end
+		return s
+	end
+	requestFunc = function()
+		relocateChosenItemsFromActor(npc, talkingMuggingSquadInfo.chosenItems)
+	end
+	agreeText = function()
+		return getRandomTranslatedText("mugging_here_is_my_stuff_", faction, "bandit", "mugging_here_is_my_stuff")
+	end
+	rejectText = function()
+		return getRandomTranslatedText("mugging_fuck_you_and_start_fight_", faction, "bandit", "mugging_fuck_you_and_start_fight")
+	end
+	GTFOText = function()
+		return getRandomTranslatedText("mugging_thank_you_for_stuff_and_gtfo_", faction, "bandit", "mugging_thank_you_for_stuff_and_gtfo")
+	end
+	GTFOOkText = function()
+		return getRandomTranslatedText("mugging_next_time_ill_get_my_stuff_back_", faction, "bandit", "mugging_next_time_ill_get_my_stuff_back")
+	end
+	return {
+		whoAreYouText = whoAreYouText,
+		requestText = requestText, 
+		requestFunc = requestFunc, 
+		agreeText = agreeText, 
+		rejectText = rejectText, 
+		GTFOText = GTFOText, 
+		GTFOOkText = GTFOOkText, 
+	}
+end
+
+factionToMuggingOptions = {}
+factionToMuggingOptions.bandit = function(squad, npc, actor)
+	-- 15% chance that they want all items
+	if math.random() < 0.15 then
+		return allItemsMuggingOption(squad, npc, actor)
+	else
+		-- choose either money or one item
+		if math.random() < 0.5 then
+			return someItemsMuggingOption(squad, npc, actor)
+		else
+			return moneyMuggingOption(squad, npc, actor)
+		end
+	end
+end
+factionToMuggingOptions.renegade = factionToMuggingOptions.bandit
+factionToMuggingOptions.killer = function(squad, npc, actor)
+	return moneyMuggingOption(squad, npc, actor)
+end
+
+function pickMuggingOption(squad, npc, actor)
+	local faction = character_community(npc)
+
+	-- Defaults
+	local result = defaultMuggingOption(squad, npc, actor)
+
+	if factionToMuggingOptions[faction] then
+		result = factionToMuggingOptions[faction](squad, npc, actor)
+	end
+	
+	return result
+end
+
 function dialogs.demonized_mugging_squads_prepare_dialog_info(a, b)
 	local gameTime = game.get_game_time()
 	local Y, M, D, h, m, s, ms = 0, 0, 0, 0, 0, 0, 0
 	Y, M, D, h, m, s, ms = gameTime:get(Y, M, D, h, m, s, ms)
 	local seed = tonumber(Y .. M .. D .. h)
 	math.randomseed(seed)
-	
+
 	local npc, actor = getNpcAndActor(a, b)
 	local squad = get_object_squad(npc)
 	talkingMuggingSquadInfo = {
