@@ -1357,9 +1357,7 @@ function dialogs.demonized_mugging_squads_break_dialog(a, b)
 	dialogs.break_dialog(a, b)
 	local npc, actor = getNpcAndActor(a, b)
 	local squad = get_object_squad(npc)
-	if squad then
-		setSquadStage(squad, squadStages.done)
-	end
+	setSquadStage(squad, squadStages.done)
 	clearTalkingMuggingSquadInfo()
 end
 
