@@ -1143,8 +1143,6 @@ end
 -- Get all items from actor
 function allItemsMuggingOption(squad, npc, actor)
 	local faction = character_community(npc)
-	local actorFaction = character_community(actor)
-	local count = squad:npc_count()
 
 	local whoAreYouText
 	local requestText
@@ -1189,8 +1187,6 @@ end
 
 function moneyMuggingOption(squad, npc, actor)
 	local faction = character_community(npc)
-	local actorFaction = character_community(actor)
-	local count = squad:npc_count()
 
 	local whoAreYouText
 	local requestText
@@ -1221,6 +1217,7 @@ function moneyMuggingOption(squad, npc, actor)
 	GTFOOkText = function()
 		return getRandomTranslatedText("mugging_next_time_ill_get_my_stuff_back_", faction, "bandit", "mugging_next_time_ill_get_my_stuff_back")
 	end
+
 	return {
 		whoAreYouText = whoAreYouText,
 		requestText = requestText, 
@@ -1234,8 +1231,6 @@ end
 
 function someItemsMuggingOption(squad, npc, actor)
 	local faction = character_community(npc)
-	local actorFaction = character_community(actor)
-	local count = squad:npc_count()
 
 	local whoAreYouText
 	local requestText
@@ -1271,6 +1266,7 @@ function someItemsMuggingOption(squad, npc, actor)
 	GTFOOkText = function()
 		return getRandomTranslatedText("mugging_next_time_ill_get_my_stuff_back_", faction, "bandit", "mugging_next_time_ill_get_my_stuff_back")
 	end
+
 	return {
 		whoAreYouText = whoAreYouText,
 		requestText = requestText, 
@@ -1303,14 +1299,7 @@ end
 
 function pickMuggingOption(squad, npc, actor)
 	local faction = character_community(npc)
-
-	-- Defaults
-	local result = defaultMuggingOption(squad, npc, actor)
-
-	if factionToMuggingOptions[faction] then
-		result = factionToMuggingOptions[faction](squad, npc, actor)
-	end
-	
+	local result = factionToMuggingOptions[faction] and factionToMuggingOptions[faction](squad, npc, actor) or defaultMuggingOption(squad, npc, actor)
 	return result
 end
 
