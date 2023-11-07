@@ -1278,6 +1278,185 @@ function someItemsMuggingOption(squad, npc, actor)
 	}
 end
 
+function convertToNewFaction(squad, npc, actor)
+	dialogs.break_dialog(npc, actor)
+	clearTalkingMuggingSquadInfo()
+	invalidateSquad(squad)
+
+	-- Set new community
+	local faction = character_community(npc)
+
+	-- Give default armor
+	local armorPriority = {
+		outfit_novice = 1,
+		outfit_light = 2,
+		outfit_medium = 3,
+		outfit_heavy = 4,
+		outfit_exo = 5,
+	}
+	local currentBestArmor
+	local currentBestArmorPriority = 1
+	local function itr(_, obj)
+		if IsOutfit(obj) then
+			local outfit = obj
+			local repair_type = SYS_GetParam(0, outfit:section(), "repair_type", "")
+			local priority = armorPriority[repair_type] or 1
+			if outfit:condition() >= 0.5 and priority >= currentBestArmorPriority then
+				currentBestArmor = outfit
+				currentBestArmorPriority = priority
+			end
+		end
+	end
+	actor:iterate_inventory(itr, actor)
+	
+	-- Find best suited armor given initial armor
+	local newArmorCandidates = {}
+	local newArmor
+	ini_sys:section_for_each(function(section)
+		local community = SYS_GetParam(0, section, "community", "")
+		local repair_type = SYS_GetParam(0, outfit:section(), "repair_type", "")
+		if community == faction and armorPriority[repair_type] and armorPriority[repair_type] <= currentBestArmorPriority then
+			newArmorCandidates[#newArmorCandidates + 1] = {
+				section = section,
+				priority = armorPriority[repair_type]
+			}
+		end
+	end)
+
+	-- Filter armor by the best
+	if is_not_empty(newArmorCandidates) then
+		local newArmors = {}
+		local newBestPriority = 1
+		table.sort(newArmorCandidates, function(a, b) return a.priority > b.priority end)
+
+		for i, v in ipairs(newArmorCandidates) do
+			if is_not_empty(newArmors) then
+				if v.priority < newBestPriority then
+					break
+				elseif v.priority == newBestPriority then
+					newArmors[#newArmors + 1] = v.section
+				end
+			else
+				if v.priority <= currentBestArmorPriority then
+					newBestPriority = v.priority
+					newArmors[#newArmors + 1] = v.section
+				end
+			end
+		end
+
+		if is_empty(newArmors) then
+			print_tip("Failed to find best suited armor of faction %s, pick random", faction)
+			newArmors[#newArmors + 1] = newArmorCandidates[math.random(#newArmorCandidates)].section
+		end
+
+		newArmor = newArmors[math.random(#newArmors)]
+	else
+		print_tip("Failed to find any armors of faction %s, dont do anything", faction)
+	end
+
+	-- Set teleport to main faction base
+	local startLocationCandidates = {}
+	local startLocation
+	local ini_map = ini_file("plugins\\new_game_start_locations.ltx")
+	ini_map:section_for_each(function(section)
+		if section:find("^" .. faction .. "_start_location") then
+			local n = ini_map:line_count(section)
+			if n > 0 then
+				for i = 0,n-1 do
+					local res,id,val = ini:r_line(section,i,"","")
+					startLocationCandidates[#startLocationCandidates + 1] = {
+						name = id,
+						params = val
+					}
+				end
+			end
+		end
+	end)
+
+	if is_not_empty(startLocationCandidates) then
+		local location = startLocationCandidates[1]
+		local level = str_explode(location.params, ",")[1]
+		local params = utils_data.collect_section(ini_map, location.name, true)
+		startLocation = {
+			level = level,
+			lvid = params.lvid,
+			gvid = params.gvid,
+			x = params.x,
+			y = params.y,
+			z = params.z
+		}
+	else
+		print_tip("failed to find start location for faction %s", faction)
+	end
+
+	if not startLocation then
+		return
+	end
+
+	-- If all is well - do it
+	if newArmor then
+		if currentBestArmor then
+			alife_release(currentBestArmor)
+		end
+		local se_obj = alife_create_item(newArmor, actor)
+		CreateTimeEvent("newArmorMoveToRuck", 0, 0, function()
+			local obj = level.object_by_id(se_obj.id)
+			if obj then
+				actor:move_to_slot(obj, 7)
+				return true
+			end
+			return false
+		end)
+	end
+
+	set_actor_true_community(faction, true)
+	ChangeLevel(vector():set(startLocation.x, startLocation.y, startLocation.z), startLocation.lvid, startLocation.gvid, VEC_ZERO, true)
+end
+
+function factionConvertionOption(squad, npc, actor)
+	local faction = character_community(npc)
+
+	local whoAreYouText
+	local requestText
+	local requestFunc
+	local agreeText
+	local rejectText
+	local GTFOText
+	local GTFOOkText
+	
+	whoAreYouText = function()
+		return gt("mugging_who_are_you") or ""
+	end
+	requestText = function()
+		return getRandomTranslatedText("mugging_convert_to_us_", faction, "monolith", "mugging_convert_to_us")
+	end
+	requestFunc = function()
+		convertToNewFaction(squad, npc, actor)
+	end
+	agreeText = function()
+		return getRandomTranslatedText("mugging_convert_agree_", faction, "monolith", "mugging_convert_agree")
+	end
+	rejectText = function()
+		return getRandomTranslatedText("mugging_fuck_you_and_start_fight_", faction, "bandit", "mugging_fuck_you_and_start_fight")
+	end
+	GTFOText = function()
+		return getRandomTranslatedText("mugging_thank_you_for_stuff_and_gtfo_", faction, "bandit", "mugging_thank_you_for_stuff_and_gtfo")
+	end
+	GTFOOkText = function()
+		return getRandomTranslatedText("mugging_next_time_ill_get_my_stuff_back_", faction, "bandit", "mugging_next_time_ill_get_my_stuff_back")
+	end
+
+	return {
+		whoAreYouText = whoAreYouText,
+		requestText = requestText, 
+		requestFunc = requestFunc, 
+		agreeText = agreeText, 
+		rejectText = rejectText, 
+		GTFOText = GTFOText, 
+		GTFOOkText = GTFOOkText, 
+	}
+end
+
 factionToMuggingOptions = {}
 factionToMuggingOptions.bandit = function(squad, npc, actor)
 	-- 15% chance that they want all items
@@ -1296,6 +1475,10 @@ factionToMuggingOptions.renegade = factionToMuggingOptions.bandit
 factionToMuggingOptions.killer = function(squad, npc, actor)
 	return moneyMuggingOption(squad, npc, actor)
 end
+factionToMuggingOptions.monolith = function(squad, npc, actor)
+	return factionConvertionOption(squad, npc, actor)
+end
+factionToMuggingOptions.greh = factionToMuggingOptions.monolith
 
 function pickMuggingOption(squad, npc, actor)
 	local faction = character_community(npc)
