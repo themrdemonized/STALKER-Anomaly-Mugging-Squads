@@ -1457,35 +1457,6 @@ function factionConvertionOption(squad, npc, actor)
 	}
 end
 
-factionToMuggingOptions = {}
-factionToMuggingOptions.bandit = function(squad, npc, actor)
-	-- 15% chance that they want all items
-	if math.random() < 0.15 then
-		return allItemsMuggingOption(squad, npc, actor)
-	else
-		-- choose either money or one item
-		if math.random() < 0.5 then
-			return someItemsMuggingOption(squad, npc, actor)
-		else
-			return moneyMuggingOption(squad, npc, actor)
-		end
-	end
-end
-factionToMuggingOptions.renegade = factionToMuggingOptions.bandit
-factionToMuggingOptions.killer = function(squad, npc, actor)
-	return moneyMuggingOption(squad, npc, actor)
-end
-factionToMuggingOptions.monolith = function(squad, npc, actor)
-	return factionConvertionOption(squad, npc, actor)
-end
-factionToMuggingOptions.greh = factionToMuggingOptions.monolith
-
-function pickMuggingOption(squad, npc, actor)
-	local faction = character_community(npc)
-	local result = factionToMuggingOptions[faction] and factionToMuggingOptions[faction](squad, npc, actor) or defaultMuggingOption(squad, npc, actor)
-	return result
-end
-
 function dialogs.demonized_mugging_squads_prepare_dialog_info(a, b)
 	local gameTime = game.get_game_time()
 	local Y, M, D, h, m, s, ms = 0, 0, 0, 0, 0, 0, 0
@@ -1551,4 +1522,34 @@ function dialogs.demonized_mugging_squads_fuck_you_and_start_fight(a, b)
 	invalidateSquad(squad)
 	setSquadAsEnemy(squad)
 	clearTalkingMuggingSquadInfo()
+end
+
+-- Set mugging options per squad here
+factionToMuggingOptions = {}
+factionToMuggingOptions.bandit = function(squad, npc, actor)
+	-- 15% chance that they want all items
+	if math.random() < 0.15 then
+		return allItemsMuggingOption(squad, npc, actor)
+	else
+		-- choose either money or one item
+		if math.random() < 0.5 then
+			return someItemsMuggingOption(squad, npc, actor)
+		else
+			return moneyMuggingOption(squad, npc, actor)
+		end
+	end
+end
+factionToMuggingOptions.renegade = factionToMuggingOptions.bandit
+factionToMuggingOptions.killer = function(squad, npc, actor)
+	return moneyMuggingOption(squad, npc, actor)
+end
+factionToMuggingOptions.monolith = function(squad, npc, actor)
+	return factionConvertionOption(squad, npc, actor)
+end
+factionToMuggingOptions.greh = factionToMuggingOptions.monolith
+
+function pickMuggingOption(squad, npc, actor)
+	local faction = character_community(npc)
+	local result = factionToMuggingOptions[faction] and factionToMuggingOptions[faction](squad, npc, actor) or defaultMuggingOption(squad, npc, actor)
+	return result
 end
