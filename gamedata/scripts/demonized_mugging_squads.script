@@ -20,6 +20,11 @@ local gizmos = {
 	sphereSquad = nil,
 }
 local debugMode = true
+local function print_tip(...)
+	if debugMode then
+		return _G.print_tip(...)
+	end
+end
 local gizmosInitialized = false
 function initializeGizmos()
 	if gizmosInitialized then return end
@@ -1280,7 +1285,6 @@ end
 
 function convertToNewFaction(squad, npc, actor)
 	dialogs.break_dialog(npc, actor)
-	clearTalkingMuggingSquadInfo()
 	invalidateSquad(squad)
 
 	-- Set new community
@@ -1314,7 +1318,7 @@ function convertToNewFaction(squad, npc, actor)
 	local newArmor
 	ini_sys:section_for_each(function(section)
 		local community = SYS_GetParam(0, section, "community", "")
-		local repair_type = SYS_GetParam(0, outfit:section(), "repair_type", "")
+		local repair_type = SYS_GetParam(0, section, "repair_type", "")
 		if community == faction and armorPriority[repair_type] and armorPriority[repair_type] <= currentBestArmorPriority then
 			newArmorCandidates[#newArmorCandidates + 1] = {
 				section = section,
@@ -1331,10 +1335,10 @@ function convertToNewFaction(squad, npc, actor)
 
 		for i, v in ipairs(newArmorCandidates) do
 			if is_not_empty(newArmors) then
-				if v.priority < newBestPriority then
-					break
-				elseif v.priority == newBestPriority then
+				if v.priority == newBestPriority then
 					newArmors[#newArmors + 1] = v.section
+				else
+					break
 				end
 			else
 				if v.priority <= currentBestArmorPriority then
@@ -1363,7 +1367,7 @@ function convertToNewFaction(squad, npc, actor)
 			local n = ini_map:line_count(section)
 			if n > 0 then
 				for i = 0,n-1 do
-					local res,id,val = ini:r_line(section,i,"","")
+					local res,id,val = ini_map:r_line(section,i,"","")
 					startLocationCandidates[#startLocationCandidates + 1] = {
 						name = id,
 						params = val
@@ -1378,12 +1382,13 @@ function convertToNewFaction(squad, npc, actor)
 		local level = str_explode(location.params, ",")[1]
 		local params = utils_data.collect_section(ini_map, location.name, true)
 		startLocation = {
+			name = location.name,
 			level = level,
-			lvid = params.lvid,
-			gvid = params.gvid,
-			x = params.x,
-			y = params.y,
-			z = params.z
+			lvid = tonumber(params.lvid),
+			gvid = tonumber(params.gvid),
+			x = tonumber(params.x),
+			y = tonumber(params.y),
+			z = tonumber(params.z)
 		}
 	else
 		print_tip("failed to find start location for faction %s", faction)
@@ -1409,8 +1414,16 @@ function convertToNewFaction(squad, npc, actor)
 		end)
 	end
 
+	print_tip("change faction to %s", faction)
 	set_actor_true_community(faction, true)
-	ChangeLevel(vector():set(startLocation.x, startLocation.y, startLocation.z), startLocation.lvid, startLocation.gvid, VEC_ZERO, true)
+
+	CreateTimeEvent("muggingConvertionChangeLevel", 0, 0.5, function()
+		print_tip("commence change location to %s: %s: %s;%s;%s, %s, %s", startLocation.name, startLocation.level, round_idp(startLocation.x, 2), round_idp(startLocation.y, 2), round_idp(startLocation.z, 2), startLocation.lvid, startLocation.gvid)
+		ChangeLevel(vector():set(startLocation.x, startLocation.y, startLocation.z), startLocation.lvid, startLocation.gvid, VEC_ZERO, true)
+		clearTalkingMuggingSquadInfo()
+		return true
+	end)
+	
 end
 
 function factionConvertionOption(squad, npc, actor)
