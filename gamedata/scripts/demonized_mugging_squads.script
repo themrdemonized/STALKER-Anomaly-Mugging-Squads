@@ -1656,6 +1656,7 @@ factionToMuggingOptions.renegade = factionToMuggingOptions.bandit
 factionToMuggingOptions.killer = function(squad, npc, actor)
 	return moneyMuggingOption(squad, npc, actor)
 end
+factionToMuggingOptions.isg = factionToMuggingOptions.killer
 factionToMuggingOptions.monolith = function(squad, npc, actor)
 	return factionConvertionOption(squad, npc, actor)
 end

@@ -15,7 +15,26 @@
 		<text>demonized Mugging Squads</text>
 	</string>
 	<string id="ui_mcm_menu_demonized_mugging_squads">
-		<text>demonized Mugging Squads</text>
+		<text>Mugging Squads</text>
+	</string>
+
+	<string id="ui_mcm_demonized_mugging_squads_delayBetweenSpawns">
+		<text>Delay Between Spawns</text>
+	</string>
+	<string id="ui_mcm_demonized_mugging_squads_spawnDistance">
+		<text>Minimum Spawn Distance</text>
+	</string>
+	<string id="ui_mcm_demonized_mugging_squads_safeSmartDistance">
+		<text>Safe Zone Distance</text>
+	</string>
+	<string id="ui_mcm_demonized_mugging_squads_allowSameSquads">
+		<text>Allow Mugging Squads Of Same Factions</text>
+	</string>
+	<string id="ui_mcm_demonized_mugging_squads_allowFriendlySquads">
+		<text>Allow Mugging Squads Of Friendly Factions</text>
+	</string>
+	<string id="ui_mcm_demonized_mugging_squads_factions">
+		<text>Allowed Factions</text>
 	</string>
 
 </string_table>
