@@ -401,7 +401,7 @@ function spawnTimer()
 	--printf("-mugging_squads.spawnTimer called")
 	ResetTimeEvent("demonized_mugging_squads", "mugging_squad_spawn", delaySpawn)
 	
-	local num = 1
+	local num = settings.maxActiveSquads
 
 	-- -- check rank
 	-- local rank = ranks.get_obj_rank_name(db.actor)
@@ -714,6 +714,9 @@ function squad_on_update(squad)
 				)
 				attack(false, false)
 				setSquadStage(squad, squadStages.talk)
+				if math.random() < settings.talkChance then
+					xr_sound.set_sound_play(commander:id(), "mugging_hello")
+				end
 				forceTalk(commander)
 			end
 		end
@@ -1634,6 +1637,9 @@ function dialogs.demonized_mugging_squads_fuck_you_and_start_fight(a, b)
 	local squad = get_object_squad(npc)
 	invalidateSquad(squad)
 	setSquadAsEnemy(squad)
+	if math.random() < settings.talkChance then
+		xr_sound.set_sound_play(npc:id(), "mugging_fight")
+	end
 	clearTalkingMuggingSquadInfo()
 end
 
