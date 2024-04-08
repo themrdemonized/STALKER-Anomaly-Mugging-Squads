@@ -10,7 +10,7 @@ op = { id= "demonized_mugging_squads",sh=true ,gr={
 		{id = "maxActiveSquads", type = "track", val = 2, min = 1, max = 10, step = 1, def = 2},
 		{id = "allowSameSquads", type = "check", val = 1, def = false},
 		{id = "allowFriendlySquads", type = "check", val = 1, def = false},
-		{id = "talkChance", type = "track", val = 2, min = 0, max = 1, step = 0.1, def = 2},
+		{id = "talkChance", type = "track", val = 2, min = 0, max = 1, step = 0.1, def = 1},
 
 
 		{id = "divider", type = "line"},

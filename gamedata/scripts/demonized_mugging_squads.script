@@ -500,7 +500,7 @@ end
 -- Simplified parsing of condition list
 defaultUseCond = "{=is_wounded} false, {!is_squad_commander} false, {=actor_enemy} false, {=has_enemy} false, {=dist_to_actor_le(3)} true, false"
 local function parseConditionTable(npc, conditions)
-	for i, v in ipairs(conditions) do
+	for _, v in ipairs(conditions) do
 		local functions = v[2]
 		local val = v[1]
 		if functions then
@@ -715,6 +715,7 @@ function squad_on_update(squad)
 				attack(false, false)
 				setSquadStage(squad, squadStages.talk)
 				if math.random() < settings.talkChance then
+					xr_sound.stop_sounds_by_id(commander:id())
 					xr_sound.set_sound_play(commander:id(), "mugging_hello")
 				end
 				forceTalk(commander)
@@ -1154,6 +1155,7 @@ function relocateEverythingFromActor(npc)
 		actor:transfer_item(obj, npc)
 	end
 	actor:iterate_inventory(itr, actor)
+	dialogs.relocate_money(npc, actor:money(), "out")
 end
 
 -- These items will never be requested
@@ -1638,6 +1640,7 @@ function dialogs.demonized_mugging_squads_fuck_you_and_start_fight(a, b)
 	invalidateSquad(squad)
 	setSquadAsEnemy(squad)
 	if math.random() < settings.talkChance then
+		xr_sound.stop_sounds_by_id(npc:id())
 		xr_sound.set_sound_play(npc:id(), "mugging_fight")
 	end
 	clearTalkingMuggingSquadInfo()
