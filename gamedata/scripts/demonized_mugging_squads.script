@@ -27,99 +27,11 @@ local function printf(s, ...)
 	return string.format(s, ...)
 end
 local function print_tip(...)
-	if debugMode then
+	if debugMode and _G.print_tip then
 		return _G.print_tip(...)
 	end
 end
--- Iterative print of tables with optional sorting for spairs, formatting is similar to PHP print_r
-local function print_r(t, sort, sorting_func)
-	if not debugMode then return end
-	if not t then return end
 
-	local function vec_to_str(t)
-		if t.w then
-			return string.format("%s,%s,%s,%s", t.x, t.y, t.z, t.w)
-		elseif t.z then
-			return string.format("%s,%s,%s", t.x, t.y, t.z)
-		elseif t.y then
-			return string.format("%s,%s", t.x, t.y)
-		elseif t.x then
-			return string.format("%s", t.x)
-		end
-	end
-
-	if type(t) ~= "table" then
-		if type(t) == "userdata" then
-			local vec = vec_to_str(t)
-			if vec then
-				return printf("%s\n", vec)
-			end
-		end
-		return printf("%s\n", t)
-	end
-
-	local function sort_func(t, a, b)
-		if type(a) == "number" and type(b) == "number" then
-			return a < b
-		else
-			return tostring(a) < tostring(b)
-		end
-	end
-
-	sorting_func = sorting_func or sort_func
-
-	local iterator_func = sort and spairs or pairs
-
-    local print_r_cache={}
-    local stack = {}
-    local saved_pos = {}
-    local indent = ""
-    local res = ""
-    table.insert(stack, t)
-    while #stack > 0 do
-    	local t = table.remove(stack)
-    	if not saved_pos[t] then
-    		saved_pos[t] = {}
-    	end
-    	local new_table = false
-    	for k, v in iterator_func(t, sort_func) do
-    		local key = k
-    		if type(k) == "userdata" then
-    			key = vec_to_str(k) or "userdata"
-    		end
-    		if saved_pos[t][k] then
-    			-- Do nothing
- 			elseif type(v) == "table" and print_r_cache[tostring(v)] then
- 				res = res .. printf(indent.."["..key.."] => ".."*"..tostring(v) .. "\n")
-            elseif type(v) == "table" then
-            	table.insert(stack, t)
-            	table.insert(stack, v)
-            	res = res .. printf(indent.."["..key.."] => "..tostring(v).." {" .. "\n")
-            	indent = indent..string.rep(" ", 2)
-            	new_table = true
-            	print_r_cache[tostring(t)] = true
-            elseif type(v) == "userdata" then
-				res = res .. printf(indent.."["..key.."] => "..(vec_to_str(v) or "userdata") .. "\n")
-            else
-            	res = res .. printf(indent.."["..key.."] => "..tostring(v) .. "\n")
-            end
-            saved_pos[t][k] = true
-            if new_table then
-                break
-            end
-		end
-		print_r_cache[tostring(t)] = true
-	    if not new_table then
-        	indent = indent:sub(1, -3)
-        	if #stack > 0 then
-        		res = res .. printf(indent.."}" .. "\n")
-        	end
-    	    -- saved_pos[t] = nil
-    	end
-    end
-    res = res .. printf(" " .. "\n")
-    return res
-end
 local gizmosInitialized = false
 function initializeGizmos()
 	if gizmosInitialized then return end
