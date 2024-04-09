@@ -12,7 +12,7 @@
 
 -- Settings
 delaySpawn = 30 -- real seconds
-delayState = 10	-- real seconds
+delayState = 5	-- real seconds
 
 local id = 70000
 local idOffset = 0
@@ -1594,6 +1594,11 @@ function dialogs.demonized_mugging_squads_prepare_dialog_info(a, b)
 end
 
 function dialogs.demonized_mugging_squads_text_stop_right_there()
+	local npc = mob_trade.GetTalkingNpc()
+	if npc then
+		local faction = character_community(npc)
+		return getRandomTranslatedText("mugging_stop_right_there_", faction, "mugging_stop_right_there")
+	end
 	return gt("mugging_stop_right_there") or ""
 end
 
