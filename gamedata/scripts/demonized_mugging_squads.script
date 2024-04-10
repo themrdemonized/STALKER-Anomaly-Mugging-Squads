@@ -1051,6 +1051,7 @@ local function clearTalkingMuggingSquadInfo()
 end
 
 function getRandomTranslatedText(st, faction, defaultSt)
+	faction = faction:gsub("_npc$", "")
 	local s = utils_data.collect_translations(st .. (faction or "") .. "_") 
 	if is_empty(s) then
 		return gt(defaultSt) or ""
