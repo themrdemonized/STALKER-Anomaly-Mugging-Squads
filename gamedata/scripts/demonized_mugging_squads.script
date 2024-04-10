@@ -1111,6 +1111,25 @@ function relocateChosenItemsFromActor(npc, items)
 	end
 end
 
+function relocateRandomMoneyFromActor(npc)
+	local actor = db.actor
+
+	-- 15% chance to request all money
+	if math.random() < 0.15 then
+		dialogs.relocate_money(npc, actor:money(), "out")
+	else
+		--Up to 50% of money, minimum 1000, in 100 fractions
+		local money = actor:money()
+		if money <= 1000 then
+			dialogs.relocate_money(npc, money, "out")
+		else
+			money = math.random(1000, math.floor(money / 2))
+			money = math.max(1000, math.floor(money / 100) * 100)
+			dialogs.relocate_money(npc, money, "out")
+		end
+	end
+end
+
 -- Determine what squad wants from actor
 -- Below are lists of functions that returns a table with texts that will determine what squad wants and a function that will be applied in demonized_mugging_squads_give_my_stuff function
 -- Defaults
@@ -1130,7 +1149,7 @@ function defaultMuggingOption(squad, npc, actor)
 		return gt("mugging_give_me_stuff") or ""
 	end
 	requestFunc = function()
-		dialogs.relocate_money(npc, actor:money(), "out")
+		relocateRandomMoneyFromActor(npc)
 	end
 	agreeText = function()
 		return gt("mugging_here_is_my_stuff") or ""
@@ -1181,13 +1200,13 @@ function allItemsMuggingOption(squad, npc, actor)
 		return getRandomTranslatedText("mugging_here_is_all_my_stuff_", faction, "mugging_here_is_all_my_stuff")
 	end
 	rejectText = function()
-		return getRandomTranslatedText("mugging_fight_me_for_my_all_stuff_", faction, "mugging_fight_me_for_my_stuff")
+		return getRandomTranslatedText("mugging_fuck_you_and_start_fight_", faction, "mugging_fuck_you_and_start_fight")
 	end
 	GTFOText = function()
-		return getRandomTranslatedText("mugging_thank_you_for_all_stuff_and_gtfo_", faction, "mugging_thank_you_for_all_stuff_and_gtfo")
+		return getRandomTranslatedText("mugging_thank_you_for_stuff_and_gtfo_", faction, "mugging_thank_you_for_stuff_and_gtfo")
 	end
 	GTFOOkText = function()
-		return getRandomTranslatedText("mugging_next_time_ill_get_all_my_stuff_back_", faction, "mugging_next_time_ill_get_all_my_stuff_back")
+		return getRandomTranslatedText("mugging_next_time_ill_get_my_stuff_back_", faction, "mugging_next_time_ill_get_my_stuff_back")
 	end
 
 	return {
@@ -1219,7 +1238,7 @@ function moneyMuggingOption(squad, npc, actor)
 		return getRandomTranslatedText("mugging_give_me_money_", faction, "mugging_give_me_money")
 	end
 	requestFunc = function()
-		dialogs.relocate_money(npc, actor:money(), "out")
+		relocateRandomMoneyFromActor(npc)
 	end
 	agreeText = function()
 		return getRandomTranslatedText("mugging_here_is_my_stuff_", faction, "mugging_here_is_my_stuff")
