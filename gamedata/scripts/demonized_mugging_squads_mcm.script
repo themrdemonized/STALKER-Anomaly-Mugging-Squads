@@ -4,7 +4,7 @@
 
 op = { id= "demonized_mugging_squads",sh=true ,gr={
 		{ id= "title", type= "slide", link= "ui_options_slider_player", text="ui_mcm_demonized_mugging_squads_title", size= {512,50}, spacing= 20 },
-		{id = "delayBetweenSpawns", type = "track", val = 2, min = 3, max = 144, step = 3, def = 24},
+		{id = "delayBetweenSpawns", type = "track", val = 2, min = 2, max = 144, step = 1, def = 24},
 		{id = "spawnDistance", type = "track", val = 2, min = 100, max = 400, step = 10, def = 200},
 		{id = "safeSmartDistance", type = "track", val = 2, min = 10, max = 100, step = 10, def = 40},
 		{id = "maxActiveSquads", type = "track", val = 2, min = 1, max = 10, step = 1, def = 2},

@@ -171,7 +171,7 @@ function getFactions()
 	for k, v in pairs(settings) do
 		if k:find("^muggingFactionsCanSpawn_") and v == true then
 			local faction = k:gsub("^muggingFactionsCanSpawn_", "")
-			factions[factions + 1] = faction
+			factions[#factions + 1] = faction
 		end
 	end
 	return factions
@@ -246,7 +246,8 @@ function trySpawn()
 		local squads = getFactionSquads()[picked_squad]
 		local squad = squads[math.random(#squads)]
 		local spawn_smrt = spawn_smrts[math.random(#spawn_smrts)]
-		print_tip("-demonized_mugging_squads.trySpawn / [%s] has been spawned in [%s]", squad, spawn_smrt)
+		local level = alife():level_name(game_graph():vertex(alife_object(SIMBOARD.smarts_by_names[spawn_smrt].id).m_game_vertex_id):level_id())
+		print_tip("-demonized_mugging_squads.trySpawn / [%s] has been spawned in [%s], level [%s]", squad, spawn_smrt, level)
 	
 		-- Spawn squad and target the player
 		local sq = SIMBOARD:create_squad(SIMBOARD.smarts_by_names[spawn_smrt], squad)
@@ -265,12 +266,23 @@ function attack(state, rush)
 			se.scripted_target = state and v.stage == squadStages.approach and "actor" or nil
 			se.rush_to_target = rush == true and v.stage == squadStages.approach
 
-			print_tip("-demonized_mugging_squads. - target: %s - rush: %s, dist %s",
+			print_tip("-demonized_mugging_squads. - target: %s - rush: %s, %s",
 				se.scripted_target,
 				se.rush_to_target, 
 				(function()
 					local commander = se:commander_id() and level.object_by_id(se:commander_id())
-					return commander and commander:position():distance_to(db.actor:position())
+					if commander then
+						return ("dist %s"):format(commander:position():distance_to(db.actor:position()))
+					else
+						local se_obj = alife_object(se:commander_id())
+						if se_obj then
+							local actor_level = level.name()
+							local squad_level = alife():level_name(game_graph():vertex(se_obj.m_game_vertex_id):level_id())
+							return ("level %s, actor level %s"):format(squad_level, actor_level)
+						else
+							return "failed to get distance, no commander se_obj"
+						end
+					end
 				end)()
 			)
 		end
@@ -445,6 +457,30 @@ function parseCondition(npc, condString)
 	return result
 end
 
+-- Check if mugging squad is still valid for mugging
+function isValidActiveSquad(activeSquadId, activeSquadValue)
+	local id = activeSquadId
+	local v = activeSquadValue
+	local se = alife_object(id)
+	local squad = se
+
+	if not se then return false end
+	if se:section_name() ~= v.name then return false end
+	if squad:npc_count() == 0 then return false end
+
+	local allDead = true
+	for k in squad:squad_members() do
+		local npc_se = alife_object(k.id)
+		if npc_se and npc_se:alive() then
+			allDead = false
+			break
+		end
+	end
+	if allDead then return false end
+
+	return true
+end
+
 function stateTimer()
 	ResetTimeEvent("demonized_mugging_squads", "mugging_squad_state", delayState)
 	
@@ -452,12 +488,12 @@ function stateTimer()
 	local currentActorStage
 	for id, v in pairs(activeSquads) do
 		local se = alife_object(id)
-		if (not se) or (se:section_name() ~= v.name) then
-			print_tip("-demonized_mugging_squads.stateTimer cleaning [%s] | section: %s - actual: %s", id, v.name, se and se:section_name())
-			activeSquads[id] = nil
-		else
-			local squad = se
+		local squad = se
 
+		if not isValidActiveSquad(id, v) then
+			print_tip("-demonized_mugging_squads.stateTimer cleaning [%s] | section: %s - actual: %s", id, v.name, se and se:section_name())
+			invalidateSquad(se)
+		else
 			-- If squad is one man -- fill them up to random 2-5
 			if squad:npc_count() <= 1 and not isSquadCommanderVisible(squad) and v.stage == squadStages.approach then
 				local min = 3 - squad:npc_count()
@@ -1060,22 +1096,27 @@ function getRandomTranslatedText(st, faction, defaultSt)
 	end
 end
 
+-- These items will never be requested
+ignoreItemsToMug = {
+	bolt = true,
+	bolt_bullet = true,
+	cash = true,
+}
+
 function relocateEverythingFromActor(npc)
 	local actor = db.actor	
 	local function itr(_, obj)
-		local amount = IsItem("multiuse", obj:section()) and obj:get_remaining_uses() or 1
-		news_manager.relocate_item(actor, "out", obj:section(), amount)
-		actor:transfer_item(obj, npc)
+		if not ignoreItemsToMug[obj:section()] then
+			local amount = IsItem("multiuse", obj:section()) and obj:get_remaining_uses() or 1
+			news_manager.relocate_item(actor, "out", obj:section(), amount)
+			actor:transfer_item(obj, npc)
+		end
 	end
 	actor:iterate_inventory(itr, actor)
 	dialogs.relocate_money(npc, actor:money(), "out")
 end
 
--- These items will never be requested
-ignoreItemsToMug = {
-	bolt = true,
-	bolt_bullet = true,
-}
+
 function chooseRandomItemsFromActor(npc, amount)
 	local actor = db.actor
 	local items = {}
