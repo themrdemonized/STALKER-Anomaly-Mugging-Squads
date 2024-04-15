@@ -105,6 +105,31 @@
 		<text>I'm not giving you anything. I earned what I have, and I'm not just handing it over to some low-life scum like you.</text>
 	</string>
 
+	<!-- Merc -->
+	<string id="mugging_stop_right_there_killer_1">
+		<text>Well, well, what do we have here?</text>
+	</string>
+
+	<string id="mugging_give_me_money_killer_1">
+		<text>We're the ones who get paid to take care of business around here. And you... you're about to make our day a whole lot better. We're not asking for much. Just a bit of cash to sweeten the deal, you know? Hand it over, and we'll make sure you don't run into any... unfortunate accidents around here.</text>
+	</string>
+
+	<string id="mugging_here_is_my_stuff_killer_1">
+		<text>Fine. Just take it and let me be on my way.</text>
+	</string>
+
+	<string id="mugging_thank_you_for_stuff_and_gtfo_killer_1">
+		<text>Pleasure doing business with you, friend.</text>
+	</string>
+
+	<string id="mugging_next_time_ill_get_my_stuff_back_killer_1">
+		<text>Yeah, yeah...</text>
+	</string>
+
+	<string id="mugging_fuck_you_and_start_fight_killer_1">
+		<text>I'm not giving you anything. I earned what I have, and I'm not just handing it over to some hired guns.</text>
+	</string>
+
 	<!-- Army -->
 	<string id="mugging_stop_right_there_army_1">
 		<text>Well, well, what do we have here?</text>
@@ -361,43 +386,6 @@
 	</string>
 
 	<string id="mugging_fuck_you_and_start_fight_isg_1">
-		<text>I'm not giving you anything. I earned what I have, and I'm not just handing it over to some low-life scum like you.</text>
-	</string>
-
-	<!-- Merc -->
-	<string id="mugging_stop_right_there_killer_1">
-		<text>Well, well, what do we have here?</text>
-	</string>
-
-	<string id="mugging_give_me_some_item_killer_1">
-		<text>You don't need to know who we are, buddy, just know that passing through comes with a price. Hand over your gear and whatever else you got, and we'll let you continue on your little journey.</text>
-	</string>
-
-	<string id="mugging_give_me_all_stuff_killer_1">
-		<text>That's none of your concern, stalker. What matters is that you're in our territory, and we've got a toll for trespassers like you. We want every single thing you've got on you. We want it all, and we want it now. We don't care about your problems. You either hand over everything you've got or you're gonna be a fresh meal for the mutants.</text>
-	</string>
-
-	<string id="mugging_give_me_money_killer_1">
-		<text>You don't need to know who we are, buddy, just know that passing through comes with a price. The kind that's paid in cold, hard cash. Hand over the cash you've got, and maybe we'll let you pass through in one piece.</text>
-	</string>
-
-	<string id="mugging_here_is_my_stuff_killer_1">
-		<text>Fine, fine. Just take what you want and let me be on my way.</text>
-	</string>
-
-	<string id="mugging_here_is_all_my_stuff_killer_1">
-		<text>Fine, take it. Just please don't hurt me.</text>
-	</string>
-
-	<string id="mugging_thank_you_for_stuff_and_gtfo_killer_1">
-		<text>Pleasure doing business with you, pal. Now scram before we change our minds and decide to take more than just your gear.</text>
-	</string>
-
-	<string id="mugging_next_time_ill_get_my_stuff_back_killer_1">
-		<text>Yeah, yeah... I'm going.</text>
-	</string>
-
-	<string id="mugging_fuck_you_and_start_fight_killer_1">
 		<text>I'm not giving you anything. I earned what I have, and I'm not just handing it over to some low-life scum like you.</text>
 	</string>
 
