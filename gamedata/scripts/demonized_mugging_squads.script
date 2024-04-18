@@ -1200,7 +1200,7 @@ function defaultMuggingOption(squad, npc, actor)
 		return gt("mugging_fuck_you_and_start_fight") or ""
 	end
 	GTFOText = function()
-		return gt("mugging_thank_you_and_gtfo") or ""
+		return gt("mugging_thank_you") or ""
 	end
 	GTFOOkText = function()
 		return gt("mugging_ok") or ""

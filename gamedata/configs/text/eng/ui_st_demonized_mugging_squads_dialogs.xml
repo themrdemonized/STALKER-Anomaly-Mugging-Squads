@@ -19,7 +19,7 @@
 		<text>Fine, fine. Just take what you want and let me be on my way.</text>
 	</string>
 
-	<string id="mugging_thank_you_and_gtfo">
+	<string id="mugging_thank_you">
 		<text>Pleasure doing business with you, pal. Now scram before we change our minds and decide to take more than just your gear.</text>
 	</string>
 
@@ -45,7 +45,7 @@
 	</string>
 
 	<string id="mugging_give_me_money_bandit_1">
-		<text>You don't need to know who we are, buddy, just know that passing through comes with a price. The kind that's paid in cold, hard cash. Hand over the cash you've got, and maybe we'll let you pass through in one piece.</text>
+		<text>You don't need to know who we are, buddy, just know that passing through comes with a price. The kind that's paid in cold, hard cash. Hand over the cash you've got, and we'll let you pass through in one piece.</text>
 	</string>
 
 	<string id="mugging_here_is_my_stuff_bandit_1">
@@ -82,7 +82,7 @@
 	</string>
 
 	<string id="mugging_give_me_money_renegade_1">
-		<text>You don't need to know who we are, buddy, just know that passing through comes with a price. The kind that's paid in cold, hard cash. Hand over the cash you've got, and maybe we'll let you pass through in one piece.</text>
+		<text>You don't need to know who we are, buddy, just know that passing through comes with a price. The kind that's paid in cold, hard cash. Hand over the cash you've got, and we'll let you pass through in one piece.</text>
 	</string>
 
 	<string id="mugging_here_is_my_stuff_renegade_1">
