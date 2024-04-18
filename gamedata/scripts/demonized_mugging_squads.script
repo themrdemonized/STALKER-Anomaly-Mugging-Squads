@@ -1185,7 +1185,7 @@ function defaultMuggingOption(squad, npc, actor)
 	local GTFOOkText
 
 	whoAreYouText = function()
-		return gt("mugging_who_are_you") or ""
+		return getRandomTranslatedText("mugging_who_are_you_", faction, "mugging_who_are_you")
 	end
 	requestText = function()
 		return gt("mugging_give_me_stuff") or ""
@@ -1230,7 +1230,7 @@ function allItemsMuggingOption(squad, npc, actor)
 	local GTFOOkText
 
 	whoAreYouText = function()
-		return gt("mugging_who_are_you") or ""
+		return getRandomTranslatedText("mugging_who_are_you_", faction, "mugging_who_are_you")
 	end
 	requestText = function()
 		return getRandomTranslatedText("mugging_give_me_all_stuff_", faction, "mugging_give_me_all_stuff")
@@ -1245,10 +1245,10 @@ function allItemsMuggingOption(squad, npc, actor)
 		return getRandomTranslatedText("mugging_fuck_you_and_start_fight_", faction, "mugging_fuck_you_and_start_fight")
 	end
 	GTFOText = function()
-		return getRandomTranslatedText("mugging_thank_you_for_stuff_and_gtfo_", faction, "mugging_thank_you_for_stuff_and_gtfo")
+		return getRandomTranslatedText("mugging_thank_you_", faction, "mugging_thank_you")
 	end
 	GTFOOkText = function()
-		return getRandomTranslatedText("mugging_next_time_ill_get_my_stuff_back_", faction, "mugging_next_time_ill_get_my_stuff_back")
+		return getRandomTranslatedText("mugging_finish_", faction, "mugging_finish")
 	end
 
 	return {
@@ -1274,7 +1274,7 @@ function moneyMuggingOption(squad, npc, actor)
 	local GTFOOkText
 	
 	whoAreYouText = function()
-		return gt("mugging_who_are_you") or ""
+		return getRandomTranslatedText("mugging_who_are_you_", faction, "mugging_who_are_you")
 	end
 	requestText = function()
 		return getRandomTranslatedText("mugging_give_me_money_", faction, "mugging_give_me_money")
@@ -1289,10 +1289,10 @@ function moneyMuggingOption(squad, npc, actor)
 		return getRandomTranslatedText("mugging_fuck_you_and_start_fight_", faction, "mugging_fuck_you_and_start_fight")
 	end
 	GTFOText = function()
-		return getRandomTranslatedText("mugging_thank_you_for_stuff_and_gtfo_", faction, "mugging_thank_you_for_stuff_and_gtfo")
+		return getRandomTranslatedText("mugging_thank_you_", faction, "mugging_thank_you")
 	end
 	GTFOOkText = function()
-		return getRandomTranslatedText("mugging_next_time_ill_get_my_stuff_back_", faction, "mugging_next_time_ill_get_my_stuff_back")
+		return getRandomTranslatedText("mugging_finish_", faction, "mugging_finish")
 	end
 
 	return {
@@ -1318,7 +1318,7 @@ function someItemsMuggingOption(squad, npc, actor)
 	local GTFOOkText
 	
 	whoAreYouText = function()
-		return gt("mugging_who_are_you") or ""
+		return getRandomTranslatedText("mugging_who_are_you_", faction, "mugging_who_are_you")
 	end
 	requestText = function()
 		local items = chooseRandomItemsFromActor(npc, math.random(5))
@@ -1338,10 +1338,10 @@ function someItemsMuggingOption(squad, npc, actor)
 		return getRandomTranslatedText("mugging_fuck_you_and_start_fight_", faction, "mugging_fuck_you_and_start_fight")
 	end
 	GTFOText = function()
-		return getRandomTranslatedText("mugging_thank_you_for_stuff_and_gtfo_", faction, "mugging_thank_you_for_stuff_and_gtfo")
+		return getRandomTranslatedText("mugging_thank_you_", faction, "mugging_thank_you")
 	end
 	GTFOOkText = function()
-		return getRandomTranslatedText("mugging_next_time_ill_get_my_stuff_back_", faction, "mugging_next_time_ill_get_my_stuff_back")
+		return getRandomTranslatedText("mugging_finish_", faction, "mugging_finish")
 	end
 
 	return {
@@ -1516,7 +1516,7 @@ function factionConvertionOption(squad, npc, actor)
 	local GTFOOkText
 	
 	whoAreYouText = function()
-		return gt("mugging_who_are_you") or ""
+		return getRandomTranslatedText("mugging_who_are_you_", faction, "mugging_who_are_you")
 	end
 	requestText = function()
 		return getRandomTranslatedText("mugging_convert_to_us_", faction, "mugging_convert_to_us")
@@ -1531,10 +1531,10 @@ function factionConvertionOption(squad, npc, actor)
 		return getRandomTranslatedText("mugging_fuck_you_and_start_fight_", faction, "mugging_fuck_you_and_start_fight")
 	end
 	GTFOText = function()
-		return getRandomTranslatedText("mugging_thank_you_for_stuff_and_gtfo_", faction, "mugging_thank_you_for_stuff_and_gtfo")
+		return getRandomTranslatedText("mugging_thank_you_", faction, "mugging_thank_you")
 	end
 	GTFOOkText = function()
-		return getRandomTranslatedText("mugging_next_time_ill_get_my_stuff_back_", faction, "mugging_next_time_ill_get_my_stuff_back")
+		return getRandomTranslatedText("mugging_finish_", faction, "mugging_finish")
 	end
 
 	return {
@@ -1587,7 +1587,7 @@ function dialogs.demonized_mugging_squads_text_here_is_my_stuff()
 	return talkingMuggingSquadInfo.option.agreeText()
 end
 
-function dialogs.demonized_mugging_squads_give_my_stuff(a, b)
+function dialogs.demonized_mugging_squads_give_my_stuff()
 	talkingMuggingSquadInfo.option.requestFunc()
 end     
 
