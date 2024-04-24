@@ -31,6 +31,15 @@ local function print_tip(...)
 		return _G.print_tip(...)
 	end
 end
+local function print_err(s, ...)
+	s = "!" .. s
+	if debugMode and _G.print_tip then
+		_G.print_tip(s, ...)
+	else
+		_G.printf(s, ...)
+	end
+	return string.format(s, ...)
+end
 
 local gizmosInitialized = false
 function initializeGizmos()
@@ -144,12 +153,12 @@ function setSquadStage(squad, num)
 end
 
 function invalidateSquad(squad)
-	print_tip("squad %s is invalidated", squad.id)
+	print_tip("-demonized_mugging_squads squad %s is invalidated", squad.id)
 	activeSquads[squad.id] = nil
 end
 
 function setSquadAsEnemy(squad)
-	print_tip("squad %s is enemy!", squad.id)
+	print_tip("-demonized_mugging_squads squad %s is enemy!", squad.id)
 	if squad.force_set_goodwill then
 		squad:force_set_goodwill(-5000, db.actor)
 	end
@@ -291,12 +300,12 @@ end
 
 function updateTalk()
 	if not load_var(db.actor, "force_all_talk", false) then
-		print_tip("actor not talking, updateTalk stop")
+		print_tip("-demonized_mugging_squads actor not talking, updateTalk stop")
 		UnregisterScriptCallback("actor_on_update", updateTalk)
 		return
 	end
 	if not db.actor:is_talking() then
-		print_tip("actor stop talking, force_all_talk false and updateTalk stop")
+		print_tip("-demonized_mugging_squads actor stop talking, force_all_talk false and updateTalk stop")
 		save_var(db.actor, "force_all_talk", false)
 		UnregisterScriptCallback("actor_on_update", updateTalk)
 		return
@@ -393,14 +402,14 @@ function addMoreMembersToSquad(squad, num)
 	-- get squad smart
 	local squad_smart = squad.smart_id and SIMBOARD.smarts[squad.smart_id].smrt
 	if not squad_smart then
-		print_tip("-demonized_mugging_squads.addMoreMembersToSquad, cant add members to %s, no smart", squad:name())
+		print_err("-demonized_mugging_squads.addMoreMembersToSquad, cant add members to %s, no smart", squad:name())
 		return
 	end
 
 	-- get npc to spawn section
 	local random_spawn = ini_sys:r_string_ex(squad:section_name(), "npc_random")
 	if not random_spawn then
-		print_tip("-demonized_mugging_squads.addMoreMembersToSquad, cant add members to %s, no random_spawn", squad:name())
+		print_err("-demonized_mugging_squads.addMoreMembersToSquad, cant add members to %s, no random_spawn", squad:name())
 		return
 	end
 	random_spawn = parse_names(random_spawn)
@@ -546,7 +555,7 @@ function stateTimer()
 		end
 	end
 	
-	print_tip("player is vulnerable to mugging, attack")
+	print_tip("-demonized_mugging_squads player is vulnerable to mugging, attack")
 	attack(true, true)
 	
 	return false
@@ -560,7 +569,7 @@ function load_state(m_data)
 	
 	if DEV_DEBUG and demonized_mugging_squads then
 		for k, v in pairs(demonized_mugging_squads) do
-			print_tip("# LOADING: Mugging Squad | [%s]: %s", k, v)
+			print_tip("-demonized_mugging_squads # LOADING: Mugging Squad | [%s]: %s", k, v)
 		end
 	end
 	
@@ -587,7 +596,7 @@ function save_state(m_data)
 	
 	if DEV_DEBUG then
 		for k, v in pairs(demonized_mugging_squads) do
-			print_tip("# SAVING: Mugging Squad | [%s]: %s", k, v)
+			print_tip("-demonized_mugging_squads # SAVING: Mugging Squad | [%s]: %s", k, v)
 		end
 	end
 	
@@ -654,7 +663,7 @@ function squad_on_update(squad)
 		if commander then
 			local condition = parseCondition(commander, defaultUseCond)
 			if condition then
-				print_tip("npc %s start to talk, pos %s, actor %s, distance %s",
+				print_tip("-demonized_mugging_squads npc %s start to talk, pos %s, actor %s, distance %s",
 					commander:id(),
 					roundVec(commander:position()),
 					roundVec(db.actor:position()),
@@ -1047,7 +1056,7 @@ function configure_actions(npc, ini, scheme, section, stype, temp)
 		if (action) then
 			action:add_precondition(world_property(evaid, false))
 		else
-			printf("axr_panic: no action id p[%s]", i)
+			printf("-demonized_mugging_squads axr_panic: no action id p[%s]", i)
 		end
 	end
 end 
@@ -1416,13 +1425,13 @@ function convertToNewFaction(squad, npc, actor)
 		end
 
 		if is_empty(newArmors) then
-			print_tip("Failed to find best suited armor of faction %s, pick random", faction)
+			print_err("-demonized_mugging_squads Failed to find best suited armor of faction %s, pick random", faction)
 			newArmors[#newArmors + 1] = newArmorCandidates[math.random(#newArmorCandidates)].section
 		end
 
 		newArmor = newArmors[math.random(#newArmors)]
 	else
-		print_tip("Failed to find any armors of faction %s, dont do anything", faction)
+		print_err("-demonized_mugging_squads Failed to find any armors of faction %s, dont do anything", faction)
 	end
 
 	-- Set teleport to main faction base
@@ -1439,7 +1448,7 @@ function convertToNewFaction(squad, npc, actor)
 
 					-- Only levels with defined story_only variable is available to ensure same location as in new game screen
 					if levelParams[2] == "true" or levelParams[2] == "false" then
-						print_tip("add location candidate for %s: %s, %s", faction, id, val)
+						print_tip("-demonized_mugging_squads add location candidate for %s: %s, %s", faction, id, val)
 						startLocationCandidates[#startLocationCandidates + 1] = {
 							name = id,
 							params = val
@@ -1464,7 +1473,7 @@ function convertToNewFaction(squad, npc, actor)
 			z = tonumber(params.z)
 		}
 	else
-		print_tip("failed to find start location for faction %s", faction)
+		print_err("-demonized_mugging_squads failed to find start location for faction %s", faction)
 	end
 
 	if not startLocation then
@@ -1487,11 +1496,11 @@ function convertToNewFaction(squad, npc, actor)
 		end)
 	end
 
-	print_tip("change faction to %s", faction)
+	print_tip("-demonized_mugging_squads change faction to %s", faction)
 	set_actor_true_community(faction, true)
 
 	CreateTimeEvent("muggingConvertionChangeLevel", 0, 0.5, function()
-		print_tip("commence change location to %s: %s: %s;%s;%s, %s, %s", startLocation.name, startLocation.level, round_idp(startLocation.x, 2), round_idp(startLocation.y, 2), round_idp(startLocation.z, 2), startLocation.lvid, startLocation.gvid)
+		print_tip("-demonized_mugging_squads commence change location to %s: %s: %s;%s;%s, %s, %s", startLocation.name, startLocation.level, round_idp(startLocation.x, 2), round_idp(startLocation.y, 2), round_idp(startLocation.z, 2), startLocation.lvid, startLocation.gvid)
 		ChangeLevel(vector():set(startLocation.x, startLocation.y, startLocation.z), startLocation.lvid, startLocation.gvid, VEC_ZERO, true)
 		clearTalkingMuggingSquadInfo()
 		return true
