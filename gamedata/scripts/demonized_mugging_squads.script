@@ -19,7 +19,7 @@ local idOffset = 0
 local gizmos = {
 	sphereSquad = nil,
 }
-local debugMode = true
+local debugMode = false
 local function printf(s, ...)
 	if debugMode then
 		_G.printf(s, ...)
