@@ -12,10 +12,10 @@
 <string_table>
 
 	<string id="ui_mcm_demonized_mugging_squads_title">
-		<text>demonized Гопстоп-отряды</text>
+		<text>Mugging Squads</text>
 	</string>
 	<string id="ui_mcm_menu_demonized_mugging_squads">
-		<text>Гопстоп-отряды</text>
+		<text>Mugging Squads</text>
 	</string>
 
 	<string id="ui_mcm_demonized_mugging_squads_delayBetweenSpawns">
