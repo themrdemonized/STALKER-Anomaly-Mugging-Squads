@@ -256,7 +256,7 @@ function trySpawn()
 		local squad = squads[math.random(#squads)]
 		local spawn_smrt = spawn_smrts[math.random(#spawn_smrts)]
 		local level = alife():level_name(game_graph():vertex(alife_object(SIMBOARD.smarts_by_names[spawn_smrt].id).m_game_vertex_id):level_id())
-		print_tip("-demonized_mugging_squads.trySpawn / [%s] has been spawned in [%s], level [%s]", squad, spawn_smrt, level)
+		print_err("-demonized_mugging_squads.trySpawn / [%s] has been spawned in [%s], level [%s]", squad, spawn_smrt, level)
 	
 		-- Spawn squad and target the player
 		local sq = SIMBOARD:create_squad(SIMBOARD.smarts_by_names[spawn_smrt], squad)
@@ -300,12 +300,12 @@ end
 
 function updateTalk()
 	if not load_var(db.actor, "force_all_talk", false) then
-		print_tip("-demonized_mugging_squads actor not talking, updateTalk stop")
+		print_err("-demonized_mugging_squads actor not talking, updateTalk stop")
 		UnregisterScriptCallback("actor_on_update", updateTalk)
 		return
 	end
 	if not db.actor:is_talking() then
-		print_tip("-demonized_mugging_squads actor stop talking, force_all_talk false and updateTalk stop")
+		print_err("-demonized_mugging_squads actor stop talking, force_all_talk false and updateTalk stop")
 		save_var(db.actor, "force_all_talk", false)
 		UnregisterScriptCallback("actor_on_update", updateTalk)
 		return
@@ -618,7 +618,7 @@ function load_state(m_data)
 	
 	if DEV_DEBUG and demonized_mugging_squads then
 		for k, v in pairs(demonized_mugging_squads) do
-			print_tip("-demonized_mugging_squads # LOADING: Mugging Squad | [%s]: %s", k, v)
+			print_err("-demonized_mugging_squads # LOADING: Mugging Squad | [%s]: %s", k, v)
 		end
 	end
 	
@@ -645,7 +645,7 @@ function save_state(m_data)
 	
 	if DEV_DEBUG then
 		for k, v in pairs(demonized_mugging_squads) do
-			print_tip("-demonized_mugging_squads # SAVING: Mugging Squad | [%s]: %s", k, v)
+			print_err("-demonized_mugging_squads # SAVING: Mugging Squad | [%s]: %s", k, v)
 		end
 	end
 	
@@ -712,7 +712,7 @@ function squad_on_update(squad)
 		if commander then
 			local condition = parseCondition(commander, defaultUseCond)
 			if condition then
-				print_tip("-demonized_mugging_squads npc %s start to talk, pos %s, actor %s, distance %s",
+				print_err("-demonized_mugging_squads npc %s start to talk, pos %s, actor %s, distance %s",
 					commander:id(),
 					roundVec(commander:position()),
 					roundVec(db.actor:position()),
@@ -1497,7 +1497,7 @@ function convertToNewFaction(squad, npc, actor)
 
 					-- Only levels with defined story_only variable is available to ensure same location as in new game screen
 					if levelParams[2] == "true" or levelParams[2] == "false" then
-						print_tip("-demonized_mugging_squads add location candidate for %s: %s, %s", faction, id, val)
+						print_err("-demonized_mugging_squads add location candidate for %s: %s, %s", faction, id, val)
 						startLocationCandidates[#startLocationCandidates + 1] = {
 							name = id,
 							params = val
@@ -1545,7 +1545,7 @@ function convertToNewFaction(squad, npc, actor)
 		end)
 	end
 
-	print_tip("-demonized_mugging_squads change faction to %s", faction)
+	print_err("-demonized_mugging_squads change faction to %s", faction)
 	set_actor_true_community(faction, true)
 
 	-- Give psy helmet if factions are Sin or Monolith
@@ -1555,7 +1555,7 @@ function convertToNewFaction(squad, npc, actor)
 	end
 
 	CreateTimeEvent("muggingConvertionChangeLevel", 0, 0.5, function()
-		print_tip("-demonized_mugging_squads commence change location to %s: %s: %s;%s;%s, %s, %s", startLocation.name, startLocation.level, round_idp(startLocation.x, 2), round_idp(startLocation.y, 2), round_idp(startLocation.z, 2), startLocation.lvid, startLocation.gvid)
+		print_err("-demonized_mugging_squads commence change location to %s: %s: %s;%s;%s, %s, %s", startLocation.name, startLocation.level, round_idp(startLocation.x, 2), round_idp(startLocation.y, 2), round_idp(startLocation.z, 2), startLocation.lvid, startLocation.gvid)
 		ChangeLevel(vector():set(startLocation.x, startLocation.y, startLocation.z), startLocation.lvid, startLocation.gvid, VEC_ZERO, true)
 		clearTalkingMuggingSquadInfo()
 		return true
