@@ -714,8 +714,8 @@ function squad_on_update(squad)
 			if condition then
 				print_err("-demonized_mugging_squads npc %s start to talk, pos %s, actor %s, distance %s",
 					commander:id(),
-					roundVec(commander:position()),
-					roundVec(db.actor:position()),
+					utils_data.vector_to_string(roundVec(commander:position())),
+					utils_data.vector_to_string(roundVec(db.actor:position())),
 					commander:position():distance_to_sqr(db.actor:position())
 				)
 				attack(false, false)
