@@ -1499,6 +1499,12 @@ function convertToNewFaction(squad, npc, actor)
 	print_tip("-demonized_mugging_squads change faction to %s", faction)
 	set_actor_true_community(faction, true)
 
+	-- Give psy helmet if factions are Sin or Monolith
+	if (faction == "greh" or faction == "monolith") and not (db.actor:object("good_psy_helmet") or db.actor:object("bad_psy_helmet")) then
+		alife_create_item("good_psy_helmet", actor)
+		news_manager.relocate_item(actor, "in", "good_psy_helmet")
+	end
+
 	CreateTimeEvent("muggingConvertionChangeLevel", 0, 0.5, function()
 		print_tip("-demonized_mugging_squads commence change location to %s: %s: %s;%s;%s, %s, %s", startLocation.name, startLocation.level, round_idp(startLocation.x, 2), round_idp(startLocation.y, 2), round_idp(startLocation.z, 2), startLocation.lvid, startLocation.gvid)
 		ChangeLevel(vector():set(startLocation.x, startLocation.y, startLocation.z), startLocation.lvid, startLocation.gvid, VEC_ZERO, true)

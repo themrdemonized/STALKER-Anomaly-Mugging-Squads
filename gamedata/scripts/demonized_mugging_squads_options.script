@@ -41,22 +41,6 @@
 -- Duty
 -- Freedom
 
--- Define faction dialogs
-mugging_options = {
-	["army"] = "give_all_money",
-	["bandit"] = "give_all_money",
-	["csky"] = "give_all_money",
-	["dolg"] = "give_all_money",
-	["ecolog"] = "give_all_money",
-	["freedom"] = "give_all_money",
-	["greh"] = "give_all_money",
-	["isg"] = "give_all_money",
-	["killer"] = "give_all_money",
-	["monolith"] = "give_all_money",
-	["renegade"] = "give_all_money",
-	["stalker"] = "give_all_money",
-}
-
 -- Mugging squads will stop targeting the player if he is in one of these maps
 safe_levels = { 
 	---- North
