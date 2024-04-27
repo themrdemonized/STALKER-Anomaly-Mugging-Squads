@@ -1229,6 +1229,8 @@ end
 -- Below are lists of functions that returns a table with texts that will determine what squad wants and a function that will be applied in demonized_mugging_squads_give_my_stuff function
 -- Defaults
 function defaultMuggingOption(squad, npc, actor)
+	local faction = character_community(npc)
+	
 	local whoAreYouText
 	local requestText
 	local requestFunc
