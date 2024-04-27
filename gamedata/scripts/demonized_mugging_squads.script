@@ -399,35 +399,84 @@ function addMoreMembersToSquad(squad, num)
 	local lvid = commander.m_level_vertex_id
 	local gvid = commander.m_game_vertex_id
 
-	-- get squad smart
-	local squad_smart = squad.smart_id and SIMBOARD.smarts[squad.smart_id].smrt
-	if not squad_smart then
-		print_err("-demonized_mugging_squads.addMoreMembersToSquad, cant add members to %s, no smart", squad:name())
-		return
-	end
+	local g_obj = level.object_by_id(squad:commander_id())
 
-	-- get npc to spawn section
-	local random_spawn = ini_sys:r_string_ex(squad:section_name(), "npc_random")
-	if not random_spawn then
-		print_err("-demonized_mugging_squads.addMoreMembersToSquad, cant add members to %s, no random_spawn", squad:name())
-		return
-	end
-	random_spawn = parse_names(random_spawn)
+	-- Spawn procedure when game object is available
+	if g_obj then
+		print_tip("-demonized_mugging_squads.addMoreMembersToSquad, game_object is available %s : %s", squad:name(), g_obj:name())
 
-	print_tip("-demonized_mugging_squads.addMoreMembersToSquad, add members to %s : %s", squad:name(), num)
-	for i = 1, num do
-		local random_sec = random_spawn[math.random(1, #random_spawn)]
-
-		-- add and setup new npc
-		local new_member_id = squad:add_squad_member(random_sec, pos, lvid, gvid)
-		local se_obj = new_member_id and alife_object(new_member_id)
-		if (se_obj) then
-			squad_smart:register_npc(se_obj)
-			SIMBOARD:setup_squad_and_group(se_obj)
+		-- get npc to spawn section
+		local random_spawn = ini_sys:r_string_ex(squad:section_name(), "npc_random")
+		if not random_spawn then
+			print_err("-demonized_mugging_squads.addMoreMembersToSquad, cant add members to %s, no random_spawn", squad:name())
+			return
 		end
+		random_spawn = parse_names(random_spawn)
+
+		print_tip("-demonized_mugging_squads.addMoreMembersToSquad, add members to %s : %s", squad:name(), num)
+		for i = 1, num do
+			local random_sec = random_spawn[math.random(1, #random_spawn)]
+
+			-- add and setup new npc
+			local sim = alife()
+			local pos = g_obj:position()
+			local lvid = g_obj:level_vertex_id()
+			local gvid = g_obj:game_vertex_id()
+			local obj = alife_create(random_sec, pos, lvid, gvid)
+
+			if obj then
+				squad:register_member(obj.id)
+
+				local actor = sim:actor()
+				if (simulation_objects.is_on_the_same_level(obj, actor) and pos:distance_to_sqr(actor.position) <= sim:switch_distance()^2) then
+					db.spawned_vertex_by_id[obj.id] = lvid
+				end
+
+				print_tip("-demonized_mugging_squads.addMoreMembersToSquad, spawned member %s of %s", random_sec, squad:name())
+			else
+				print_err("-demonized_mugging_squads.addMoreMembersToSquad, failed to spawn member %s of %s", random_sec, squad:name())
+			end		
+		end
+
+	-- When isn't
+	else
+		print_tip("-demonized_mugging_squads.addMoreMembersToSquad, game_object is not available, use server object : %s", squad:name())
+
+		-- get squad smart
+		local squad_smart = squad.smart_id and SIMBOARD.smarts[squad.smart_id].smrt
+		if not squad_smart then
+			print_err("-demonized_mugging_squads.addMoreMembersToSquad, cant add members to %s, no smart", squad:name())
+			return
+		end
+
+		-- get npc to spawn section
+		local random_spawn = ini_sys:r_string_ex(squad:section_name(), "npc_random")
+		if not random_spawn then
+			print_err("-demonized_mugging_squads.addMoreMembersToSquad, cant add members to %s, no random_spawn", squad:name())
+			return
+		end
+		random_spawn = parse_names(random_spawn)
+
+		print_tip("-demonized_mugging_squads.addMoreMembersToSquad, add members to %s : %s", squad:name(), num)
+		for i = 1, num do
+			local random_sec = random_spawn[math.random(1, #random_spawn)]
+
+			-- add and setup new npc
+			local new_member_id = squad:add_squad_member(random_sec, pos, lvid, gvid)
+			local se_obj = new_member_id and alife_object(new_member_id)
+			if (se_obj) then
+				print_tip("-demonized_mugging_squads.addMoreMembersToSquad, spawned member %s of %s", random_sec, squad:name())
+				squad_smart:register_npc(se_obj)
+				SIMBOARD:setup_squad_and_group(se_obj)
+			else
+				print_err("-demonized_mugging_squads.addMoreMembersToSquad, failed to spawn member %s of %s", random_sec, squad:name())
+			end
+		end
+
+		squad:update()
 	end
 
-	squad:update()
+	
 end
 
 -- Simplified parsing of condition list

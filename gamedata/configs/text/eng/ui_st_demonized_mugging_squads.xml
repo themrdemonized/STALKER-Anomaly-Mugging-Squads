@@ -27,6 +27,12 @@
 	<string id="ui_mcm_demonized_mugging_squads_safeSmartDistance">
 		<text>Safe Zone Distance</text>
 	</string>
+	<string id="ui_mcm_demonized_mugging_squads_maxActiveSquads">
+		<text>Max number of active squads</text>
+	</string>
+	<string id="ui_mcm_demonized_mugging_squads_talkChance">
+		<text>Voice chance</text>
+	</string>
 	<string id="ui_mcm_demonized_mugging_squads_allowSameSquads">
 		<text>Allow Mugging Squads Of Same Factions</text>
 	</string>

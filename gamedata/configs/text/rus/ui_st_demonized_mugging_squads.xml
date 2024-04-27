@@ -27,6 +27,12 @@
 	<string id="ui_mcm_demonized_mugging_squads_safeSmartDistance">
 		<text>Расстояние до безопасной зоны</text>
 	</string>
+	<string id="ui_mcm_demonized_mugging_squads_maxActiveSquads">
+		<text>Макс кол-во сквадов</text>
+	</string>
+	<string id="ui_mcm_demonized_mugging_squads_talkChance">
+		<text>Шанс на реплики</text>
+	</string>
 	<string id="ui_mcm_demonized_mugging_squads_allowSameSquads">
 		<text>Разрешить гоп-стоп отряды такой-же группировки</text>
 	</string>
