@@ -225,6 +225,12 @@ function trySpawn()
 			end
 		end 
 	end
+
+	if is_empty(enemy_factions) then
+		print_err("-demonized_mugging_squads.trySpawn / no faction is possible to spawn, skip")
+		return
+	end
+
 	local picked_squad = enemy_factions[math.random(#enemy_factions)]
 
 	-- gather smarts
@@ -253,6 +259,12 @@ function trySpawn()
 	
 	if #spawn_smrts > 0 then
 		local squads = getFactionSquads()[picked_squad]
+
+		if is_empty(squads) then
+			print_err("-demonized_mugging_squads.trySpawn / no squad can be found for faction %s, skip", picked_squad)
+			return
+		end
+
 		local squad = squads[math.random(#squads)]
 		local spawn_smrt = spawn_smrts[math.random(#spawn_smrts)]
 		local level = alife():level_name(game_graph():vertex(alife_object(SIMBOARD.smarts_by_names[spawn_smrt].id).m_game_vertex_id):level_id())
@@ -265,6 +277,8 @@ function trySpawn()
 		
 		addToActiveSquads(sq)
 		lastSpawnTime = game.get_game_time()
+	else
+		print_err("-demonized_mugging_squads.trySpawn / no smart can be found to spawn squad of %s", picked_squad)
 	end
 end
 
