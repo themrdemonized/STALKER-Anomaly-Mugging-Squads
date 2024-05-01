@@ -1159,7 +1159,7 @@ function getRandomTranslatedText(st, faction, defaultSt)
 	if is_empty(s) then
 		return gt(defaultSt) or ""
 	else
-		return s[math.random(#s)] or ""
+		return gt(s[math.random(#s)]) or ""
 	end
 end
 
@@ -1563,6 +1563,7 @@ function convertToNewFaction(squad, npc, actor)
 
 	print_err("-demonized_mugging_squads change faction to %s", faction)
 	set_actor_true_community(faction, true)
+	relation_registry.set_community_goodwill(faction, AC_ID, 200)
 
 	-- Give psy helmet if factions are Sin or Monolith
 	if (faction == "greh" or faction == "monolith") and not (db.actor:object("good_psy_helmet") or db.actor:object("bad_psy_helmet")) then
